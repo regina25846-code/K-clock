@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-store">
 <title>K-Clock</title>
 <style>
 @font-face { font-family:'KoPubWorld Dotum Light'; src:url('fonts/KoPubWorld Dotum Light.ttf'); }
@@ -13,7 +14,7 @@ body { background:transparent; font-family:'Segoe UI',sans-serif; overflow:hidde
 
 #clock-area { width:100%; display:flex; flex-direction:column; align-items:center; cursor:grab; background:transparent; }
 #clock-area.dragging { cursor:grabbing; }
-#clock-row { height:90px; display:flex; align-items:center; justify-content:center; width:100%; }
+#clock-row { height:130px; min-height:130px; display:flex; align-items:center; justify-content:center; width:100%; }
 
 /* 7세그먼트 */
 .clock-7seg { display:flex; align-items:center; }
@@ -153,7 +154,7 @@ select option { background:#1e1e1e; color:#b8b8b8; }
     <div class="setting-row">
       <span>크기</span>
       <div style="display:flex;align-items:center;gap:5px">
-        <input type="range" min=10 max=120 value=70 id="size-slider" style="width:70px;accent-color:#888" oninput="changeSize(this.value);document.getElementById('size-val').textContent=this.value">
+        <input type="range" min=10 max=100 value=70 id="size-slider" style="width:70px;accent-color:#888" oninput="previewSize(this.value)" onchange="changeSize(this.value)">
         <span id="size-val" style="font-size:11px;min-width:22px;text-align:right">70</span>
       </div>
     </div>
@@ -209,6 +210,7 @@ const alarms=[];
 let flashTimer=null;
 let repeatMode=false;
 let sizeDebounce=null;
+let lockedPos=null;
 function toggleRepeatBtn(){
   repeatMode=!repeatMode;
   document.getElementById('btn-repeat').classList.toggle('active',repeatMode);
@@ -264,13 +266,15 @@ function toggleAlwaysOnTop(){
   invoke('set_always_on_top',{on_top:on});
 }
 
-function openPanel(name){
+async function openPanel(name){
   hideMenu();
+  if(!lockedPos) lockedPos=await invoke('get_window_pos');
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('open'));
   document.getElementById('panel-'+name).classList.add('open');
   setTimeout(adjustHeight,10);
 }
 function closePanel(){
+  lockedPos=null;
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('open'));
   setTimeout(adjustHeight,10);
 }
@@ -281,20 +285,20 @@ function changeStyle(v){
   else { seg.style.display='none'; txtClock.style.display='block'; txtClock.style.fontFamily=v; }
 }
 
-function changeSize(v){
+function previewSize(v){
   txtClock.style.fontSize=v+'px';
   const scale=v/40;
   const sw=document.getElementById('seg-wrap');
   sw.style.transform=`scale(${scale})`;
   sw.style.transformOrigin='center';
-  const rowH=Math.max(90, Math.round(v*1.3));
-  document.getElementById('clock-row').style.height=rowH+'px';
-  clearTimeout(sizeDebounce);
-  sizeDebounce=setTimeout(()=>{
-    const w=Math.max(300, Math.round(v*5.8)+40);
-    const totalH=document.getElementById('clock-area').offsetHeight;
-    invoke('set_window_size',{width:w,height:Math.max(totalH,rowH)});
-  },150);
+  document.getElementById('size-val').textContent=v;
+}
+async function changeSize(v){
+  previewSize(v);
+  const w=Math.max(300, Math.round(v*5.8)+40);
+  const totalH=document.getElementById('clock-area').offsetHeight;
+  await invoke('set_window_size',{width:w,height:totalH});
+  if(lockedPos) await invoke('set_window_pos',{x:lockedPos[0],y:lockedPos[1]});
 }
 
 function changeBrightness(v){
@@ -393,14 +397,17 @@ clockArea.addEventListener('contextmenu',async function(e){
   menu.style.visibility='hidden';
   menu.style.display='block';
   menu.style.top='-9999px';
+  menu.style.left='0px';
   const menuH=menu.offsetHeight;
-  const menuW=menu.offsetWidth;
+  const menuW=Math.max(menu.offsetWidth||0, 130);
   menu.style.display='none';
   menu.style.visibility='';
   const winW=window.innerWidth;
-  const mx=Math.min(e.clientX, winW-menuW-2);
   const my=e.clientY;
-  await invoke('set_window_height',{height:my+menuH+4});
+  const mx=Math.min(e.clientX, winW-menuW-4);
+  const neededW=Math.max(winW, mx+menuW+4);
+  const neededH=my+menuH+4;
+  await invoke('set_window_size',{width:neededW,height:neededH});
   await new Promise(r=>setTimeout(r,60));
   menu.style.left=mx+'px';
   menu.style.top=my+'px';
@@ -429,6 +436,13 @@ function changePanelColor(c){
   updatePanelBg();
   localStorage.setItem('panelColor',c);
 }
+
+// 슬라이더 max 강제 설정 (캐시 무효화)
+(function(){
+  const sl=document.getElementById('size-slider');
+  sl.max=100;
+  if(parseInt(sl.value)>100){ sl.value=100; document.getElementById('size-val').textContent=100; }
+})();
 
 // 설정 복원
 (function(){

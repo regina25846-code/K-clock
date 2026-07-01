@@ -2,103 +2,57 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>K-Clock</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
 
-  body {
+  html, body {
     background: transparent;
-    font-family: 'Segoe UI', '맑은 고딕', sans-serif;
     overflow: hidden;
     width: 100vw;
     height: 100vh;
   }
 
-  #app {
-    width: 100%;
-    height: 100%;
-    background: rgba(10, 10, 10, 0.88);
-    border: 1px solid rgba(224, 51, 51, 0.3);
-    border-radius: 12px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    backdrop-filter: blur(4px);
-  }
-
-  /* 드래그 핸들 */
-  #drag-bar {
+  /* ── 시계 영역 (드래그 가능) ── */
+  #clock-area {
     position: absolute;
     top: 0; left: 0; right: 0;
-    height: 28px;
-    cursor: move;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     -webkit-app-region: drag;
-    border-radius: 12px 12px 0 0;
+    cursor: move;
   }
 
-  /* 상단 버튼 */
-  #top-btns {
-    position: absolute;
-    top: 6px; right: 10px;
-    display: flex; gap: 6px;
-    -webkit-app-region: no-drag;
-  }
-  .top-btn {
-    width: 16px; height: 16px;
-    border-radius: 50%;
-    border: none;
-    cursor: pointer;
-    font-size: 8px;
-    display: flex; align-items: center; justify-content: center;
-    opacity: 0.6;
-    transition: opacity 0.15s;
-  }
-  .top-btn:hover { opacity: 1; }
-  #btn-pin { background: #e03333; color: #fff; }
-  #btn-pin.pinned { background: #ff6b6b; }
-  #btn-min { background: #555; color: #aaa; }
-  #btn-close { background: #333; color: #888; }
-
-  /* 시계 */
   #clock-wrap {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 2px;
-    padding: 8px 20px;
   }
 
-  .digit-group {
-    display: flex;
-    gap: 3px;
-  }
+  .digit-group { display: flex; gap: 4px; }
 
-  /* CSS 7세그먼트 */
+  /* 7세그먼트 */
   .seg-digit {
     position: relative;
     width: 28px;
     height: 50px;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
   }
-
   .seg {
     position: absolute;
-    background: #e03333;
+    background: #c8c8c8;
     border-radius: 2px;
     transition: opacity 0.05s;
   }
-  .seg.off { opacity: 0.08; }
-
-  /* 가로 세그먼트 */
+  .seg.off { opacity: 0; }
   .seg-h { width: 20px; height: 4px; left: 4px; }
-  /* 세로 세그먼트 */
   .seg-v { width: 4px; height: 18px; }
-
-  .seg-a { top: 0px; }
+  .seg-a { top: 0; }
   .seg-b { top: 4px; right: 0; }
   .seg-c { bottom: 4px; right: 0; }
-  .seg-d { bottom: 0px; }
+  .seg-d { bottom: 0; }
   .seg-e { bottom: 4px; left: 0; }
   .seg-f { top: 4px; left: 0; }
   .seg-g { top: 23px; }
@@ -109,143 +63,154 @@
     flex-direction: column;
     justify-content: center;
     gap: 10px;
-    padding: 0 4px;
+    padding: 0 5px;
     padding-bottom: 4px;
+    -webkit-app-region: drag;
   }
   .dot {
     width: 5px; height: 5px;
     border-radius: 50%;
-    background: #e03333;
+    background: #c8c8c8;
+    filter: drop-shadow(0 1px 4px rgba(0,0,0,0.5));
     animation: blink 1s step-end infinite;
   }
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
 
-  /* 날짜 */
-  #date-line {
+  /* ── 패널 컨테이너 ── */
+  #panel-area {
+    position: absolute;
+    top: 100px; left: 0; right: 0; bottom: 0;
+    display: none;
+    -webkit-app-region: no-drag;
+  }
+
+  /* 패널 공통 */
+  .panel {
+    display: none;
+    background: rgba(18, 18, 18, 0.94);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    margin: 0 10px;
+    padding: 14px 16px;
+    position: relative;
+  }
+  .panel.active { display: block; }
+
+  .panel-title {
     font-size: 11px;
-    color: rgba(224, 51, 51, 0.7);
+    color: rgba(255,255,255,0.4);
     letter-spacing: 1px;
-    margin-top: -4px;
-    margin-bottom: 4px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    font-family: 'Segoe UI', sans-serif;
   }
 
-  /* 탭 */
-  #tabs {
-    display: flex;
-    gap: 0;
-    border-top: 1px solid rgba(255,255,255,0.05);
-    width: 100%;
+  .close-panel {
+    position: absolute;
+    top: 10px; right: 12px;
+    background: none; border: none;
+    color: rgba(255,255,255,0.3);
+    font-size: 14px; cursor: pointer;
+    line-height: 1;
   }
-  .tab-btn {
-    flex: 1;
-    padding: 5px 0;
-    background: none;
-    border: none;
-    color: rgba(255,255,255,0.35);
-    font-size: 10px;
+  .close-panel:hover { color: rgba(255,255,255,0.7); }
+
+  /* ── 우클릭 메뉴 ── */
+  #ctx-menu {
+    display: none;
+    position: fixed;
+    background: rgba(25, 25, 25, 0.96);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 6px 0;
+    z-index: 9999;
+    min-width: 140px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    -webkit-app-region: no-drag;
+  }
+  .menu-item {
+    padding: 8px 16px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.75);
     cursor: pointer;
-    transition: color 0.15s, background 0.15s;
-    font-family: '맑은 고딕', sans-serif;
+    font-family: '맑은 고딕', 'Segoe UI', sans-serif;
+    display: flex; align-items: center; gap: 8px;
   }
-  .tab-btn:hover { color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.04); }
-  .tab-btn.active { color: #e03333; border-bottom: 2px solid #e03333; }
+  .menu-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+  .menu-sep { height: 1px; background: rgba(255,255,255,0.08); margin: 4px 0; }
+  .menu-item.danger { color: rgba(255,80,80,0.8); }
+  .menu-item.danger:hover { color: #ff5050; background: rgba(255,50,50,0.08); }
 
-  /* 탭 패널 */
-  .tab-panel { display: none; width: 100%; padding: 10px 16px; }
-  .tab-panel.active { display: block; }
-
-  /* 알람 */
-  .row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-  input[type="time"], input[type="text"] {
+  /* ── 입력 공통 ── */
+  input[type="time"], input[type="text"], input[type="number"] {
     background: rgba(255,255,255,0.07);
     border: 1px solid rgba(255,255,255,0.12);
     border-radius: 6px;
     color: #fff;
-    padding: 4px 8px;
+    padding: 5px 8px;
     font-size: 12px;
     outline: none;
     font-family: '맑은 고딕', sans-serif;
   }
-  input[type="time"]:focus, input[type="text"]:focus {
-    border-color: rgba(224,51,51,0.6);
-  }
+  input:focus { border-color: rgba(200,200,200,0.4); }
+  .row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+
   .btn-sm {
-    padding: 4px 12px;
-    border: none;
-    border-radius: 6px;
-    font-size: 11px;
-    cursor: pointer;
+    padding: 5px 12px;
+    border: none; border-radius: 6px;
+    font-size: 11px; cursor: pointer;
     font-family: '맑은 고딕', sans-serif;
   }
-  .btn-red { background: #e03333; color: #fff; }
-  .btn-red:hover { background: #c72a2a; }
-  .btn-gray { background: rgba(255,255,255,0.1); color: #aaa; }
-  .btn-gray:hover { background: rgba(255,255,255,0.18); }
+  .btn-white { background: rgba(255,255,255,0.12); color: #ddd; }
+  .btn-white:hover { background: rgba(255,255,255,0.2); }
+  .btn-ghost { background: rgba(255,255,255,0.06); color: #999; }
+  .btn-ghost:hover { background: rgba(255,255,255,0.12); }
 
-  #alarm-list { max-height: 60px; overflow-y: auto; }
+  /* 알람 목록 */
+  #alarm-list { max-height: 80px; overflow-y: auto; }
   .alarm-item {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 3px 0;
-    font-size: 11px; color: #ccc;
+    padding: 4px 0; font-size: 11px; color: #bbb;
     border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-family: '맑은 고딕', sans-serif;
   }
-  .alarm-item .del { color: #e03333; cursor: pointer; font-size: 12px; }
-  .alarm-item .del:hover { color: #ff6b6b; }
+  .alarm-del { color: rgba(255,100,100,0.6); cursor: pointer; }
+  .alarm-del:hover { color: #ff5050; }
 
   /* 카운트다운 */
-  #countdown-display {
-    font-size: 22px;
-    color: #e03333;
-    font-weight: 700;
-    text-align: center;
-    margin: 6px 0;
-    letter-spacing: 2px;
-    font-family: 'Consolas', monospace;
+  #cd-display {
+    font-size: 26px; color: #ddd; text-align: center;
+    margin: 8px 0; letter-spacing: 3px;
+    font-family: 'Consolas', monospace; font-weight: 300;
   }
   .cd-btns { display: flex; gap: 6px; justify-content: center; }
 
   /* 설정 */
   .setting-row {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 5px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-    font-size: 12px; color: #ccc;
+    padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 12px; color: #ccc; font-family: '맑은 고딕', sans-serif;
   }
   .toggle {
-    width: 32px; height: 18px;
-    background: #333;
-    border-radius: 9px;
-    position: relative;
-    cursor: pointer;
-    transition: background 0.2s;
+    width: 32px; height: 18px; background: #333; border-radius: 9px;
+    position: relative; cursor: pointer; transition: background 0.2s;
   }
-  .toggle.on { background: #e03333; }
+  .toggle.on { background: #888; }
   .toggle::after {
-    content: '';
-    position: absolute;
-    width: 14px; height: 14px;
-    background: #fff;
-    border-radius: 50%;
-    top: 2px; left: 2px;
-    transition: left 0.2s;
+    content: ''; position: absolute;
+    width: 14px; height: 14px; background: #fff; border-radius: 50%;
+    top: 2px; left: 2px; transition: left 0.2s;
   }
   .toggle.on::after { left: 16px; }
 
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(224,51,51,0.4); border-radius: 2px; }
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
 </style>
 </head>
 <body>
-<div id="app">
-  <div id="drag-bar"></div>
-  <div id="top-btns">
-    <button class="top-btn pinned" id="btn-pin" title="항상 위">📌</button>
-    <button class="top-btn" id="btn-min" title="최소화">–</button>
-    <button class="top-btn" id="btn-close" title="닫기">✕</button>
-  </div>
 
-  <!-- 시계 -->
+<!-- 시계 -->
+<div id="clock-area">
   <div id="clock-wrap">
     <div class="digit-group" id="dg-hh"></div>
     <div class="colon"><div class="dot"></div><div class="dot"></div></div>
@@ -253,81 +218,90 @@
     <div class="colon"><div class="dot"></div><div class="dot"></div></div>
     <div class="digit-group" id="dg-ss"></div>
   </div>
-  <div id="date-line"></div>
+</div>
 
-  <!-- 탭 -->
-  <div id="tabs">
-    <button class="tab-btn active" data-tab="alarm">⏰ 알람</button>
-    <button class="tab-btn" data-tab="countdown">⏱ 카운트다운</button>
-    <button class="tab-btn" data-tab="settings">⚙ 설정</button>
-  </div>
-
-  <!-- 알람 패널 -->
-  <div class="tab-panel active" id="panel-alarm">
+<!-- 패널 영역 -->
+<div id="panel-area">
+  <!-- 알람 -->
+  <div class="panel" id="panel-alarm">
+    <div class="panel-title">알람</div>
+    <button class="close-panel" onclick="closePanel()">✕</button>
     <div class="row">
       <input type="time" id="alarm-time" value="07:00">
-      <input type="text" id="alarm-label" placeholder="알람 이름" style="flex:1">
-      <button class="btn-sm btn-red" onclick="addAlarm()">추가</button>
+      <input type="text" id="alarm-label" placeholder="이름" style="flex:1">
+      <button class="btn-sm btn-white" onclick="addAlarm()">추가</button>
     </div>
     <div id="alarm-list"></div>
   </div>
 
-  <!-- 카운트다운 패널 -->
-  <div class="tab-panel" id="panel-countdown">
+  <!-- 카운트다운 -->
+  <div class="panel" id="panel-countdown">
+    <div class="panel-title">카운트다운</div>
+    <button class="close-panel" onclick="closePanel()">✕</button>
     <div class="row" style="justify-content:center;gap:4px">
-      <input type="text" id="cd-h" placeholder="시" style="width:40px;text-align:center">
-      <span style="color:#666">:</span>
-      <input type="text" id="cd-m" placeholder="분" style="width:40px;text-align:center">
-      <span style="color:#666">:</span>
-      <input type="text" id="cd-s" placeholder="초" style="width:40px;text-align:center">
+      <input type="number" id="cd-h" placeholder="시" min="0" max="99" style="width:44px;text-align:center">
+      <span style="color:#555">:</span>
+      <input type="number" id="cd-m" placeholder="분" min="0" max="59" style="width:44px;text-align:center">
+      <span style="color:#555">:</span>
+      <input type="number" id="cd-s" placeholder="초" min="0" max="59" style="width:44px;text-align:center">
     </div>
-    <div id="countdown-display">00:00:00</div>
+    <div id="cd-display">00:00:00</div>
     <div class="cd-btns">
-      <button class="btn-sm btn-red" onclick="startCountdown()">시작</button>
-      <button class="btn-sm btn-gray" onclick="pauseCountdown()">일시정지</button>
-      <button class="btn-sm btn-gray" onclick="resetCountdown()">초기화</button>
+      <button class="btn-sm btn-white" onclick="startCd()">시작</button>
+      <button class="btn-sm btn-ghost" onclick="pauseCd()">일시정지</button>
+      <button class="btn-sm btn-ghost" onclick="resetCd()">초기화</button>
     </div>
   </div>
 
-  <!-- 설정 패널 -->
-  <div class="tab-panel" id="panel-settings">
+  <!-- 설정 -->
+  <div class="panel" id="panel-settings">
+    <div class="panel-title">설정</div>
+    <button class="close-panel" onclick="closePanel()">✕</button>
     <div class="setting-row">
       <span>항상 위</span>
-      <div class="toggle on" id="toggle-pin" onclick="togglePin()"></div>
+      <div class="toggle on" id="tog-pin" onclick="togglePin()"></div>
     </div>
     <div class="setting-row">
       <span>초 표시</span>
-      <div class="toggle on" id="toggle-sec" onclick="toggleSec()"></div>
+      <div class="toggle on" id="tog-sec" onclick="toggleSec()"></div>
     </div>
     <div class="setting-row">
-      <span>배경 불투명도</span>
-      <input type="range" min="20" max="100" value="88" id="opacity-slider"
-        style="width:100px;accent-color:#e03333"
-        oninput="setOpacity(this.value)">
+      <span>숫자 밝기</span>
+      <input type="range" min="40" max="255" value="200" id="brightness-slider"
+        style="width:90px;accent-color:#aaa"
+        oninput="setBrightness(this.value)">
     </div>
   </div>
 </div>
 
+<!-- 우클릭 메뉴 -->
+<div id="ctx-menu">
+  <div class="menu-item" onclick="openPanel('alarm')">⏰ 알람</div>
+  <div class="menu-item" onclick="openPanel('countdown')">⏱ 카운트다운</div>
+  <div class="menu-item" onclick="openPanel('settings')">⚙ 설정</div>
+  <div class="menu-sep"></div>
+  <div class="menu-item" onclick="invoke('minimize_window')">— 최소화</div>
+  <div class="menu-item danger" onclick="invoke('close_app')">✕ 종료</div>
+</div>
+
 <script>
-const invoke = (...args) => window.__TAURI__?.core?.invoke(...args) ?? Promise.resolve();
-const notify = (title, body) => invoke('show_notification', { title, body });
+const invoke = (...a) => window.__TAURI__?.core?.invoke(...a) ?? Promise.resolve();
 
 // ── 7세그먼트 ──────────────────────────────────────────────
 const SEGS = {
-  0:'abcdef', 1:'bc', 2:'abdeg', 3:'abcdg',
-  4:'bcfg', 5:'acdfg', 6:'acdefg', 7:'abc',
-  8:'abcdefg', 9:'abcdfg'
+  0:'abcdef',1:'bc',2:'abdeg',3:'abcdg',
+  4:'bcfg',5:'acdfg',6:'acdefg',7:'abc',
+  8:'abcdefg',9:'abcdfg'
 };
-const SEG_NAMES = ['a','b','c','d','e','f','g'];
 const SEG_CLASSES = {
-  a:'seg seg-h seg-a', b:'seg seg-v seg-b', c:'seg seg-v seg-c',
-  d:'seg seg-h seg-d', e:'seg seg-v seg-e', f:'seg seg-v seg-f', g:'seg seg-h seg-g'
+  a:'seg seg-h seg-a',b:'seg seg-v seg-b',c:'seg seg-v seg-c',
+  d:'seg seg-h seg-d',e:'seg seg-v seg-e',f:'seg seg-v seg-f',g:'seg seg-h seg-g'
 };
 
 function makeDigit() {
   const el = document.createElement('div');
   el.className = 'seg-digit';
-  SEG_NAMES.forEach(s => {
+  'abcdefg'.split('').forEach(s => {
     const seg = document.createElement('div');
     seg.className = SEG_CLASSES[s] + ' off';
     seg.dataset.seg = s;
@@ -335,174 +309,138 @@ function makeDigit() {
   });
   return el;
 }
-
-function makePair(containerId) {
-  const c = document.getElementById(containerId);
+function makePair(id) {
+  const c = document.getElementById(id);
   const d1 = makeDigit(), d2 = makeDigit();
   c.appendChild(d1); c.appendChild(d2);
   return [d1, d2];
 }
-
 function setDigit(el, n) {
-  const active = SEGS[n] || '';
-  el.querySelectorAll('.seg').forEach(s => {
-    s.classList.toggle('off', !active.includes(s.dataset.seg));
-  });
+  const on = SEGS[n]||'';
+  el.querySelectorAll('.seg').forEach(s => s.classList.toggle('off', !on.includes(s.dataset.seg)));
+}
+function setNum(pair, num) {
+  const s = String(num).padStart(2,'0');
+  setDigit(pair[0],+s[0]); setDigit(pair[1],+s[1]);
 }
 
-function setNumber(pair, num) {
-  const s = String(num).padStart(2, '0');
-  setDigit(pair[0], parseInt(s[0]));
-  setDigit(pair[1], parseInt(s[1]));
-}
+const dgH = makePair('dg-hh');
+const dgM = makePair('dg-mm');
+const dgS = makePair('dg-ss');
 
-const dgHH = makePair('dg-hh');
-const dgMM = makePair('dg-mm');
-const dgSS = makePair('dg-ss');
-
-// ── 날짜/시간 ──────────────────────────────────────────────
-const DAYS = ['일','월','화','수','목','금','토'];
+// ── 시계 ──────────────────────────────────────────────────
 let showSec = true;
-
 function updateClock() {
   const now = new Date();
-  setNumber(dgHH, now.getHours());
-  setNumber(dgMM, now.getMinutes());
-  if (showSec) setNumber(dgSS, now.getSeconds());
-
-  document.getElementById('date-line').textContent =
-    `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} (${DAYS[now.getDay()]})`;
-
+  setNum(dgH, now.getHours());
+  setNum(dgM, now.getMinutes());
+  if (showSec) setNum(dgS, now.getSeconds());
   checkAlarms(now);
 }
 setInterval(updateClock, 1000);
 updateClock();
 
-// ── 탭 ────────────────────────────────────────────────────
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
-  });
-});
+// ── 패널 ──────────────────────────────────────────────────
+function openPanel(name) {
+  closeCtxMenu();
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.getElementById('panel-area').style.display = 'block';
+}
+function closePanel() {
+  document.getElementById('panel-area').style.display = 'none';
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+}
 
-// ── 버튼 ──────────────────────────────────────────────────
-let pinned = true;
-document.getElementById('btn-pin').addEventListener('click', () => {
-  pinned = !pinned;
-  document.getElementById('btn-pin').classList.toggle('pinned', pinned);
-  invoke('set_always_on_top', { onTop: pinned });
+// ── 우클릭 메뉴 ──────────────────────────────────────────
+const ctxMenu = document.getElementById('ctx-menu');
+document.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  ctxMenu.style.display = 'block';
+  let x = e.clientX, y = e.clientY;
+  if (x + 160 > window.innerWidth) x = window.innerWidth - 160;
+  if (y + 200 > window.innerHeight) y = window.innerHeight - 200;
+  ctxMenu.style.left = x + 'px';
+  ctxMenu.style.top = y + 'px';
 });
-document.getElementById('btn-min').addEventListener('click', () => invoke('minimize_window'));
-document.getElementById('btn-close').addEventListener('click', () => invoke('close_app'));
+document.addEventListener('click', e => { if (!ctxMenu.contains(e.target)) closeCtxMenu(); });
+function closeCtxMenu() { ctxMenu.style.display = 'none'; }
+
+// ── 설정 ──────────────────────────────────────────────────
+let pinned = true;
+function togglePin() {
+  const t = document.getElementById('tog-pin');
+  t.classList.toggle('on');
+  pinned = t.classList.contains('on');
+  invoke('set_always_on_top', { onTop: pinned });
+}
+function toggleSec() {
+  const t = document.getElementById('tog-sec');
+  t.classList.toggle('on');
+  showSec = t.classList.contains('on');
+  const ssEl = document.getElementById('dg-ss');
+  const colons = document.querySelectorAll('.colon');
+  ssEl.style.display = showSec ? '' : 'none';
+  colons[colons.length-1].style.display = showSec ? '' : 'none';
+}
+function setBrightness(v) {
+  const c = Math.round(v);
+  const color = `rgb(${c},${c},${c})`;
+  document.querySelectorAll('.seg:not(.off)').forEach(s => s.style.background = color);
+  document.querySelectorAll('.dot').forEach(d => d.style.background = color);
+}
 
 // ── 알람 ──────────────────────────────────────────────────
-let alarms = JSON.parse(localStorage.getItem('k_alarms') || '[]');
-
+let alarms = JSON.parse(localStorage.getItem('k_alarms')||'[]');
 function saveAlarms() { localStorage.setItem('k_alarms', JSON.stringify(alarms)); }
-
 window.addAlarm = function() {
   const t = document.getElementById('alarm-time').value;
   const l = document.getElementById('alarm-label').value || '알람';
   if (!t) return;
-  alarms.push({ time: t, label: l, fired: false });
-  saveAlarms();
-  renderAlarms();
+  alarms.push({time:t,label:l,fired:false});
+  saveAlarms(); renderAlarms();
 };
-
 function renderAlarms() {
-  const list = document.getElementById('alarm-list');
-  list.innerHTML = alarms.map((a, i) => `
-    <div class="alarm-item">
-      <span>${a.time} — ${a.label}</span>
-      <span class="del" onclick="removeAlarm(${i})">✕</span>
-    </div>`).join('');
+  document.getElementById('alarm-list').innerHTML = alarms.map((a,i) =>
+    `<div class="alarm-item"><span>${a.time} · ${a.label}</span><span class="alarm-del" onclick="removeAlarm(${i})">✕</span></div>`
+  ).join('');
 }
-
-window.removeAlarm = function(i) {
-  alarms.splice(i, 1);
-  saveAlarms();
-  renderAlarms();
-};
-
+window.removeAlarm = function(i) { alarms.splice(i,1); saveAlarms(); renderAlarms(); };
 function checkAlarms(now) {
+  if (now.getSeconds()!==0) return;
   const hhmm = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-  if (now.getSeconds() !== 0) return;
-  alarms.forEach((a, i) => {
-    if (a.time === hhmm && !a.fired) {
-      a.fired = true;
-      saveAlarms();
-      notify('⏰ K-Clock 알람', a.label);
-      setTimeout(() => { alarms[i].fired = false; saveAlarms(); }, 61000);
+  alarms.forEach((a,i) => {
+    if (a.time===hhmm && !a.fired) {
+      a.fired=true; saveAlarms();
+      alert(`⏰ ${a.label}`);
+      setTimeout(()=>{alarms[i].fired=false;saveAlarms();},61000);
     }
   });
 }
 renderAlarms();
 
 // ── 카운트다운 ────────────────────────────────────────────
-let cdTotal = 0, cdRemain = 0, cdTimer = null, cdRunning = false;
-
-function cdFormat(s) {
-  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
-  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+let cdRemain=0, cdTimer=null, cdRunning=false;
+function cdFmt(s) {
+  return `${String(Math.floor(s/3600)).padStart(2,'0')}:${String(Math.floor((s%3600)/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
 }
-
-window.startCountdown = function() {
+window.startCd = function() {
   if (cdRunning) return;
-  if (cdRemain === 0) {
-    const h = parseInt(document.getElementById('cd-h').value) || 0;
-    const m = parseInt(document.getElementById('cd-m').value) || 0;
-    const s = parseInt(document.getElementById('cd-s').value) || 0;
-    cdTotal = h*3600 + m*60 + s;
-    cdRemain = cdTotal;
+  if (cdRemain===0) {
+    cdRemain=(parseInt(document.getElementById('cd-h').value)||0)*3600
+            +(parseInt(document.getElementById('cd-m').value)||0)*60
+            +(parseInt(document.getElementById('cd-s').value)||0);
   }
-  if (cdRemain <= 0) return;
-  cdRunning = true;
-  cdTimer = setInterval(() => {
+  if (cdRemain<=0) return;
+  cdRunning=true;
+  cdTimer=setInterval(()=>{
     cdRemain--;
-    document.getElementById('countdown-display').textContent = cdFormat(cdRemain);
-    if (cdRemain <= 0) {
-      clearInterval(cdTimer); cdRunning = false;
-      notify('⏱ 카운트다운 완료', '시간이 다 됐어요!');
-    }
-  }, 1000);
+    document.getElementById('cd-display').textContent=cdFmt(cdRemain);
+    if (cdRemain<=0){clearInterval(cdTimer);cdRunning=false;alert('⏱ 카운트다운 완료!');}
+  },1000);
 };
-
-window.pauseCountdown = function() {
-  if (cdTimer) { clearInterval(cdTimer); cdTimer = null; }
-  cdRunning = false;
-};
-
-window.resetCountdown = function() {
-  window.pauseCountdown();
-  cdRemain = 0;
-  document.getElementById('countdown-display').textContent = '00:00:00';
-};
-
-// ── 설정 ──────────────────────────────────────────────────
-window.togglePin = function() {
-  const t = document.getElementById('toggle-pin');
-  t.classList.toggle('on');
-  pinned = t.classList.contains('on');
-  document.getElementById('btn-pin').classList.toggle('pinned', pinned);
-  invoke('set_always_on_top', { onTop: pinned });
-};
-
-window.toggleSec = function() {
-  const t = document.getElementById('toggle-sec');
-  t.classList.toggle('on');
-  showSec = t.classList.contains('on');
-  const ss = document.querySelectorAll('#dg-ss, #dg-ss ~ .colon');
-  document.getElementById('dg-ss').parentElement.querySelectorAll('.colon:last-of-type, #dg-ss').forEach(el => {
-    el.style.display = showSec ? '' : 'none';
-  });
-};
-
-window.setOpacity = function(v) {
-  document.getElementById('app').style.background = `rgba(10,10,10,${v/100})`;
-};
+window.pauseCd = function(){clearInterval(cdTimer);cdTimer=null;cdRunning=false;};
+window.resetCd = function(){window.pauseCd();cdRemain=0;document.getElementById('cd-display').textContent='00:00:00';};
 </script>
 </body>
 </html>

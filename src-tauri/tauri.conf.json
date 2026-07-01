@@ -1,0 +1,50 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "K-Clock",
+  "version": "1.0.0",
+  "identifier": "com.kris.clock",
+  "build": {
+    "frontendDist": "../"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "K-Clock",
+        "width": 380,
+        "height": 160,
+        "minWidth": 280,
+        "minHeight": 120,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "transparent": true,
+        "resizable": true,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": null
+    },
+    "trayIcon": {
+      "id": "main",
+      "iconPath": "icons/icon.ico",
+      "iconAsTemplate": false,
+      "menuOnLeftClick": false
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "msi"],
+    "icon": ["icons/icon.ico"],
+    "windows": {
+      "nsis": {
+        "languages": ["Korean"],
+        "displayLanguageSelector": false
+      }
+    },
+    "publisher": "KrisB",
+    "copyright": "KrisB 2026"
+  },
+  "plugins": {}
+
+}

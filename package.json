@@ -1,0 +1,16 @@
+{
+  "name": "kris-clock",
+  "version": "1.0.0",
+  "description": "K-Clock - 가벼운 바탕화면 시계",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "build:win": "cargo tauri build --target x86_64-pc-windows-msvc"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2"
+  }
+}

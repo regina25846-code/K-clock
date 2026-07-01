@@ -4,434 +4,330 @@
 <meta charset="UTF-8">
 <title>K-Clock</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+@font-face { font-family:'KoPubWorld Dotum Light'; src:url('fonts/KoPubWorld Dotum Light.ttf'); }
+@font-face { font-family:'KoPubWorld Dotum Medium'; src:url('fonts/KoPubWorld Dotum Medium.ttf'); }
+@font-face { font-family:'KoPubWorld Dotum Bold'; src:url('fonts/KoPubWorld Dotum Bold.ttf'); }
 
-  html, body {
-    background: transparent;
-    overflow: hidden;
-    width: 100vw;
-    height: 100vh;
-  }
+* { margin:0; padding:0; box-sizing:border-box; user-select:none; -webkit-user-select:none; }
+body { background:transparent; font-family:'Segoe UI',sans-serif; overflow:hidden; }
 
-  /* 시계 영역 — 전체 창 = 시계 크기 */
-  #clock-area {
-    width: 100%;
-    height: 90px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    -webkit-app-region: none;
-    cursor: move;
-  }
+#clock-area { width:300px; display:flex; flex-direction:column; align-items:center; cursor:grab; }
+#clock-area.dragging { cursor:grabbing; }
+#clock-row { height:90px; display:flex; align-items:center; justify-content:center; width:100%; }
 
-  #clock-wrap {
-    display: flex;
-    align-items: center;
-  }
+/* 7세그먼트 */
+.clock-7seg { display:flex; align-items:center; }
+.digit-group { display:flex; gap:3px; }
+.seg-digit { position:relative; width:22px; height:40px; }
+.seg { position:absolute; background:#b8b8b8; border-radius:1px; transition:opacity 0.05s; }
+.seg.off { opacity:0; }
+.seg-h{width:16px;height:3px;left:3px} .seg-v{width:3px;height:14px}
+.seg-a{top:0} .seg-b{top:3px;right:0} .seg-c{bottom:3px;right:0}
+.seg-d{bottom:0} .seg-e{bottom:3px;left:0} .seg-f{top:3px;left:0} .seg-g{top:18px}
+.colon7{display:flex;flex-direction:column;justify-content:center;gap:8px;padding:0 5px 3px}
+.dot{width:4px;height:4px;border-radius:50%;background:#b8b8b8}
 
-  .digit-group { display: flex; gap: 3px; }
+#text-clock { font-size:52px; color:#b8b8b8; letter-spacing:2px; font-weight:300; line-height:1; display:none; white-space:nowrap; }
 
-  /* 7세그먼트 */
-  .seg-digit {
-    position: relative;
-    width: 22px;
-    height: 40px;
-  }
-  .seg {
-    position: absolute;
-    background: #b8b8b8;
-    border-radius: 1px;
-    transition: opacity 0.05s;
-  }
-  .seg.off { opacity: 0; }
-  .seg-h { width: 16px; height: 3px; left: 3px; }
-  .seg-v { width: 3px; height: 14px; }
-  .seg-a { top: 0; }
-  .seg-b { top: 3px; right: 0; }
-  .seg-c { bottom: 3px; right: 0; }
-  .seg-d { bottom: 0; }
-  .seg-e { bottom: 3px; left: 0; }
-  .seg-f { top: 3px; left: 0; }
-  .seg-g { top: 18px; }
+/* 패널 */
+.panel { width:300px; background:rgba(0,0,0,0.72); border-radius:0 0 10px 10px; padding:10px 14px; position:relative; display:none; }
+.panel.open { display:block; }
+.panel-title { font-size:14px; color:rgba(184,184,184,0.9); font-weight:600; margin-bottom:10px; }
+.close-panel { position:absolute; top:8px; right:10px; color:rgba(184,184,184,0.5); font-size:13px; background:none; border:none; cursor:pointer; }
 
-  /* 콜론 */
-  .colon {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 8px;
-    padding: 0 5px;
-    padding-bottom: 3px;
-    -webkit-app-region: none;
-  }
-  .dot {
-    width: 4px; height: 4px;
-    border-radius: 50%;
-    background: #b8b8b8;
-    animation: blink 1s step-end infinite;
-  }
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+/* 알람 */
+.alarm-row { display:flex; align-items:center; gap:6px; margin-bottom:8px; }
+.alarm-row input[type=time] { width:88px; flex-shrink:0; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:5px; color:#b8b8b8; padding:4px 6px; font-size:12px; outline:none; }
+.alarm-row input[type=text] { flex:1; min-width:0; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:5px; color:#b8b8b8; padding:4px 6px; font-size:12px; outline:none; }
+.btn-add { flex-shrink:0; width:36px; padding:5px 0; background:rgba(255,255,255,0.10); color:#b8b8b8; border:1px solid rgba(255,255,255,0.15); border-radius:5px; font-size:11px; cursor:pointer; text-align:center; }
+.alarm-list { display:flex; flex-direction:column; gap:4px; }
+.alarm-item { display:flex; align-items:center; justify-content:space-between; padding:5px 2px; font-size:12px; color:#b8b8b8; border-bottom:1px solid rgba(255,255,255,0.08); gap:6px; }
+.alarm-item .alarm-label { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.alarm-toggle { width:26px; height:14px; background:#333; border-radius:7px; position:relative; cursor:pointer; flex-shrink:0; }
+.alarm-toggle::after { content:''; position:absolute; width:10px; height:10px; background:#fff; border-radius:50%; top:2px; left:2px; transition:left 0.15s; }
+.alarm-toggle.on { background:#4a9; }
+.alarm-toggle.on::after { left:14px; }
+.alarm-del { background:none; border:none; color:rgba(255,80,80,0.6); cursor:pointer; font-size:12px; padding:0 2px; flex-shrink:0; }
+.empty-msg { font-size:11px; color:#777; padding:4px 0; }
 
-  /* 패널 영역 — 시계 아래 */
-  #panel-area {
-    display: none;
-    padding: 0 8px 8px 8px;
-    -webkit-app-region: no-drag;
-  }
+/* 카운트다운 */
+.cd-row { display:flex; align-items:center; gap:4px; margin-bottom:8px; justify-content:center; }
+.cd-row input[type=number] { width:44px; text-align:center; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:5px; color:#b8b8b8; padding:4px; font-size:12px; outline:none; }
+.cd-row span { color:#555; }
+#cd-display { font-size:22px; color:#b8b8b8; text-align:center; margin:8px 0; letter-spacing:2px; font-family:'Consolas',monospace; font-weight:300; }
+.cd-btns { display:flex; gap:5px; justify-content:center; }
+.cd-btns button { padding:4px 10px; border:1px solid rgba(255,255,255,0.15); border-radius:5px; font-size:11px; cursor:pointer; white-space:nowrap; background:rgba(255,255,255,0.08); color:#b8b8b8; }
 
-  .panel {
-    background: rgba(20, 20, 20, 0.95);
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 10px;
-    padding: 12px 14px;
-    position: relative;
-  }
+/* 설정 */
+.setting-row { display:flex; align-items:center; justify-content:space-between; padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.08); font-size:12px; color:#b8b8b8; }
+.setting-row:last-child { border-bottom:none; }
+.toggle { width:30px; height:16px; background:#4a9; border-radius:8px; position:relative; cursor:pointer; flex-shrink:0; }
+.toggle::after { content:''; position:absolute; width:12px; height:12px; background:#fff; border-radius:50%; top:2px; left:16px; transition:left 0.15s; }
+.toggle.off::after { left:2px; }
+.toggle.off { background:#333; }
+select { background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:5px; color:#b8b8b8; padding:3px 6px; font-size:11px; outline:none; cursor:pointer; }
 
-  .panel-title {
-    font-size: 10px;
-    color: rgba(255,255,255,0.35);
-    letter-spacing: 1px;
-    margin-bottom: 10px;
-    text-transform: uppercase;
-    font-family: 'Segoe UI', sans-serif;
-  }
+/* 우클릭 메뉴 */
+#ctx-menu { position:fixed; background:rgba(22,22,22,0.97); border:1px solid rgba(255,255,255,0.09); border-radius:9px; padding:5px 0; min-width:130px; box-shadow:0 6px 20px rgba(0,0,0,0.7); display:none; z-index:1000; }
+.menu-item { padding:7px 14px; font-size:14px; color:rgba(255,255,255,0.7); cursor:pointer; display:flex; align-items:center; gap:8px; }
+.menu-item svg { flex-shrink:0; opacity:0.75; }
+.menu-item:hover { background:rgba(255,255,255,0.07); }
+.menu-sep { height:1px; background:rgba(255,255,255,0.07); margin:3px 0; }
+.menu-item.danger { color:rgba(255,90,90,1); }
 
-  .close-panel {
-    position: absolute;
-    top: 8px; right: 10px;
-    background: none; border: none;
-    color: rgba(255,255,255,0.25);
-    font-size: 13px; cursor: pointer;
-  }
-  .close-panel:hover { color: rgba(255,255,255,0.6); }
-
-  /* 우클릭 메뉴 */
-  #ctx-menu {
-    display: none;
-    position: fixed;
-    background: rgba(22, 22, 22, 0.97);
-    border: 1px solid rgba(255,255,255,0.09);
-    border-radius: 9px;
-    padding: 5px 0;
-    z-index: 9999;
-    min-width: 130px;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.7);
-    -webkit-app-region: no-drag;
-  }
-  .menu-item {
-    padding: 7px 14px;
-    font-size: 12px;
-    color: rgba(255,255,255,0.7);
-    cursor: pointer;
-    font-family: '맑은 고딕', 'Segoe UI', sans-serif;
-  }
-  .menu-item:hover { background: rgba(255,255,255,0.07); color: #fff; }
-  .menu-sep { height: 1px; background: rgba(255,255,255,0.07); margin: 3px 0; }
-  .menu-item.danger { color: rgba(255,80,80,0.75); }
-  .menu-item.danger:hover { color: #ff5050; }
-
-  /* 공통 입력 */
-  input[type="time"], input[type="text"], input[type="number"] {
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 5px;
-    color: #ddd;
-    padding: 4px 7px;
-    font-size: 12px;
-    outline: none;
-    font-family: '맑은 고딕', sans-serif;
-  }
-  input:focus { border-color: rgba(200,200,200,0.35); }
-  .row { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; }
-  .btn-sm {
-    padding: 4px 10px; border: none; border-radius: 5px;
-    font-size: 11px; cursor: pointer; font-family: '맑은 고딕', sans-serif;
-  }
-  .btn-white { background: rgba(255,255,255,0.11); color: #ccc; }
-  .btn-white:hover { background: rgba(255,255,255,0.18); }
-  .btn-ghost { background: rgba(255,255,255,0.05); color: #888; }
-  .btn-ghost:hover { background: rgba(255,255,255,0.1); }
-
-  #alarm-list { max-height: 70px; overflow-y: auto; }
-  .alarm-item {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 3px 0; font-size: 11px; color: #aaa;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-    font-family: '맑은 고딕', sans-serif;
-  }
-  .alarm-del { color: rgba(255,80,80,0.5); cursor: pointer; }
-  .alarm-del:hover { color: #ff5050; }
-
-  #cd-display {
-    font-size: 22px; color: #ccc; text-align: center;
-    margin: 8px 0; letter-spacing: 2px;
-    font-family: 'Consolas', monospace; font-weight: 300;
-  }
-  .cd-btns { display: flex; gap: 5px; justify-content: center; }
-
-  .setting-row {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
-    font-size: 12px; color: #bbb; font-family: '맑은 고딕', sans-serif;
-  }
-  .toggle {
-    width: 30px; height: 16px; background: #333; border-radius: 8px;
-    position: relative; cursor: pointer; transition: background 0.2s;
-  }
-  .toggle.on { background: #777; }
-  .toggle::after {
-    content: ''; position: absolute;
-    width: 12px; height: 12px; background: #fff; border-radius: 50%;
-    top: 2px; left: 2px; transition: left 0.2s;
-  }
-  .toggle.on::after { left: 16px; }
-
-  ::-webkit-scrollbar { width: 3px; }
-  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+@keyframes flash { 0%,100%{opacity:1} 50%{opacity:0.15} }
+.flashing { animation:flash 0.5s ease-in-out infinite; }
 </style>
 </head>
 <body>
 
 <div id="clock-area">
-  <div id="clock-wrap">
-    <div class="digit-group" id="dg-hh"></div>
-    <div class="colon"><div class="dot"></div><div class="dot"></div></div>
-    <div class="digit-group" id="dg-mm"></div>
-    <div class="colon" id="ss-colon"><div class="dot"></div><div class="dot"></div></div>
-    <div class="digit-group" id="dg-ss"></div>
+  <div id="clock-row">
+    <div class="clock-7seg" id="seg-wrap">
+      <div class="digit-group" id="dh"></div>
+      <div class="colon7" id="colon1"><div class="dot"></div><div class="dot"></div></div>
+      <div class="digit-group" id="dm"></div>
+      <div class="colon7" id="colon2"><div class="dot"></div><div class="dot"></div></div>
+      <div class="digit-group" id="ds"></div>
+    </div>
+    <div id="text-clock">00:00:00</div>
   </div>
-</div>
 
-<div id="panel-area">
-  <!-- 알람 -->
-  <div class="panel" id="panel-alarm" style="display:none">
+  <div class="panel" id="panel-alarm">
     <div class="panel-title">알람</div>
     <button class="close-panel" onclick="closePanel()">✕</button>
-    <div class="row">
+    <div class="alarm-row">
       <input type="time" id="alarm-time" value="07:00">
-      <input type="text" id="alarm-label" placeholder="이름" style="flex:1">
-      <button class="btn-sm btn-white" onclick="addAlarm()">추가</button>
+      <input type="text" id="alarm-name" placeholder="이름">
+      <button class="btn-add" onclick="addAlarm()">추가</button>
     </div>
-    <div id="alarm-list"></div>
+    <div class="alarm-list" id="alarm-list"></div>
+    <div class="empty-msg" id="alarm-empty">등록된 알람 없음</div>
   </div>
 
-  <!-- 카운트다운 -->
-  <div class="panel" id="panel-countdown" style="display:none">
+  <div class="panel" id="panel-countdown">
     <div class="panel-title">카운트다운</div>
     <button class="close-panel" onclick="closePanel()">✕</button>
-    <div class="row" style="justify-content:center;gap:4px">
-      <input type="number" id="cd-h" placeholder="시" min="0" max="99" style="width:42px;text-align:center">
-      <span style="color:#444">:</span>
-      <input type="number" id="cd-m" placeholder="분" min="0" max="59" style="width:42px;text-align:center">
-      <span style="color:#444">:</span>
-      <input type="number" id="cd-s" placeholder="초" min="0" max="59" style="width:42px;text-align:center">
+    <div class="cd-row">
+      <input type="number" id="cd-h" placeholder="시" min=0 max=23>
+      <span>:</span>
+      <input type="number" id="cd-m" placeholder="분" min=0 max=59>
+      <span>:</span>
+      <input type="number" id="cd-s" placeholder="초" min=0 max=59>
     </div>
     <div id="cd-display">00:00:00</div>
     <div class="cd-btns">
-      <button class="btn-sm btn-white" onclick="startCd()">시작</button>
-      <button class="btn-sm btn-ghost" onclick="pauseCd()">일시정지</button>
-      <button class="btn-sm btn-ghost" onclick="resetCd()">초기화</button>
+      <button onclick="cdStart()">시작</button>
+      <button onclick="cdPause()">일시정지</button>
+      <button onclick="cdReset()">초기화</button>
     </div>
   </div>
 
-  <!-- 설정 -->
-  <div class="panel" id="panel-settings" style="display:none">
+  <div class="panel" id="panel-settings">
     <div class="panel-title">설정</div>
     <button class="close-panel" onclick="closePanel()">✕</button>
+    <div class="setting-row"><span>항상 위</span><div class="toggle" id="tog-pin" onclick="toggleAlwaysOnTop()"></div></div>
+    <div class="setting-row"><span>초 표시</span><div class="toggle" id="tog-sec" onclick="toggleSec()"></div></div>
     <div class="setting-row">
-      <span>항상 위</span>
-      <div class="toggle on" id="tog-pin" onclick="togglePin()"></div>
+      <span>스타일/폰트</span>
+      <select id="style-select" onchange="changeStyle(this.value)">
+        <option value="7seg">7세그먼트 (영문/숫자)</option>
+        <option value="Inter,Pretendard,sans-serif">Inter + Pretendard</option>
+        <option value="'Malgun Gothic','맑은 고딕',sans-serif">맑은 고딕</option>
+        <option value="Gulim,굴림,sans-serif">굴림</option>
+        <option value="'Nanum Gothic','나눔고딕',sans-serif">나눔고딕</option>
+        <option value="Arial,sans-serif">Arial</option>
+        <option value="'KoPubWorld Dotum Light',sans-serif">KoPubWorld Light</option>
+        <option value="'KoPubWorld Dotum Medium',sans-serif">KoPubWorld Medium</option>
+        <option value="'KoPubWorld Dotum Bold',sans-serif" selected>KoPubWorld Bold</option>
+      </select>
     </div>
     <div class="setting-row">
-      <span>초 표시</span>
-      <div class="toggle on" id="tog-sec" onclick="toggleSec()"></div>
+      <span>크기</span>
+      <div style="display:flex;align-items:center;gap:5px">
+        <input type="range" min=10 max=120 value=70 id="size-slider" style="width:70px;accent-color:#888" oninput="changeSize(this.value);document.getElementById('size-val').textContent=this.value">
+        <span id="size-val" style="font-size:11px;min-width:22px;text-align:right">70</span>
+      </div>
     </div>
     <div class="setting-row">
-      <span>숫자 밝기</span>
-      <input type="range" min="60" max="255" value="184" id="brightness-slider"
-        style="width:80px;accent-color:#888"
-        oninput="setBrightness(this.value)">
+      <span>밝기</span>
+      <div style="display:flex;align-items:center;gap:5px">
+        <input type="range" min=0 max=255 value=220 id="brightness-slider" style="width:70px;accent-color:#888" oninput="changeBrightness(this.value);document.getElementById('bright-val').textContent=this.value">
+        <span id="bright-val" style="font-size:11px;min-width:22px;text-align:right">220</span>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- 우클릭 메뉴 -->
 <div id="ctx-menu">
-  <div class="menu-item" onclick="openPanel('alarm')">⏰ 알람</div>
-  <div class="menu-item" onclick="openPanel('countdown')">⏱ 카운트다운</div>
-  <div class="menu-item" onclick="openPanel('settings')">⚙ 설정</div>
+  <div class="menu-item" onclick="openPanel('alarm')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><line x1="12" y1="2" x2="12" y2="4"/></svg> 알람</div>
+  <div class="menu-item" onclick="openPanel('countdown')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 카운트다운</div>
+  <div class="menu-item" onclick="openPanel('settings')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> 설정</div>
   <div class="menu-sep"></div>
-  <div class="menu-item" onclick="invoke('minimize_window')">— 최소화</div>
-  <div class="menu-item danger" onclick="invoke('close_app')">✕ 종료</div>
+  <div class="menu-item danger" onclick="closeApp()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> 종료</div>
 </div>
 
 <script>
-const invoke = (...a) => window.__TAURI__?.core?.invoke(...a) ?? Promise.resolve();
+const invoke = window.__TAURI__ ? window.__TAURI__.core.invoke : async () => {};
 
-function setWinHeight(h) {
-  invoke('set_window_height', { height: h });
-}
+// ── 7세그먼트 ──
+const SEGS={0:'abcdef',1:'bc',2:'abdeg',3:'abcdg',4:'bcfg',5:'acdfg',6:'acdefg',7:'abc',8:'abcdefg',9:'abcdfg'};
+const SC={a:'seg seg-h seg-a',b:'seg seg-v seg-b',c:'seg seg-v seg-c',d:'seg seg-h seg-d',e:'seg seg-v seg-e',f:'seg seg-v seg-f',g:'seg seg-h seg-g'};
+function md(){const el=document.createElement('div');el.className='seg-digit';'abcdefg'.split('').forEach(s=>{const sg=document.createElement('div');sg.className=SC[s]+' off';sg.dataset.seg=s;el.appendChild(sg);});return el;}
+function mp(id){const c=document.getElementById(id);const d1=md(),d2=md();c.appendChild(d1);c.appendChild(d2);return[d1,d2];}
+function sd(el,n){const on=SEGS[n]||'';el.querySelectorAll('.seg').forEach(s=>s.classList.toggle('off',!on.includes(s.dataset.seg)));}
+function sn(p,n){const s=String(n).padStart(2,'0');sd(p[0],+s[0]);sd(p[1],+s[1]);}
+const ph=mp('dh'),pm=mp('dm'),ps=mp('ds');
 
-// 드래그 — 좌클릭으로만 창 이동
-document.getElementById('clock-area').addEventListener('mousedown', e => {
-  if (e.button === 0) invoke('start_dragging');
-});
+let showSec=true, brightness=220;
+const txtClock=document.getElementById('text-clock');
+const alarms=[];
+let flashTimer=null;
 
-// ── 7세그먼트 ──────────────────────────────────────────────
-const SEGS = {
-  0:'abcdef',1:'bc',2:'abdeg',3:'abcdg',
-  4:'bcfg',5:'acdfg',6:'acdefg',7:'abc',
-  8:'abcdefg',9:'abcdfg'
-};
-const SEG_CLS = {
-  a:'seg seg-h seg-a',b:'seg seg-v seg-b',c:'seg seg-v seg-c',
-  d:'seg seg-h seg-d',e:'seg seg-v seg-e',f:'seg seg-v seg-f',g:'seg seg-h seg-g'
-};
-function makeDigit() {
-  const el = document.createElement('div');
-  el.className = 'seg-digit';
-  'abcdefg'.split('').forEach(s => {
-    const seg = document.createElement('div');
-    seg.className = SEG_CLS[s]+' off';
-    seg.dataset.seg = s;
-    el.appendChild(seg);
-  });
-  return el;
+function upd(){
+  const n=new Date();
+  sn(ph,n.getHours());sn(pm,n.getMinutes());
+  if(showSec) sn(ps,n.getSeconds());
+  const h=String(n.getHours()).padStart(2,'0');
+  const mi=String(n.getMinutes()).padStart(2,'0');
+  const sc=String(n.getSeconds()).padStart(2,'0');
+  txtClock.textContent=showSec?`${h}:${mi}:${sc}`:`${h}:${mi}`;
+  const hm=`${h}:${mi}`;
+  alarms.forEach(a=>{if(a.enabled&&a.t===hm&&n.getSeconds()===0)triggerAlarm();});
 }
-function makePair(id) {
-  const c = document.getElementById(id);
-  const d1 = makeDigit(), d2 = makeDigit();
-  c.appendChild(d1); c.appendChild(d2);
-  return [d1, d2];
-}
-function setDigit(el, n) {
-  const on = SEGS[n]||'';
-  el.querySelectorAll('.seg').forEach(s => s.classList.toggle('off', !on.includes(s.dataset.seg)));
-}
-function setNum(pair, num) {
-  const s = String(num).padStart(2,'0');
-  setDigit(pair[0],+s[0]); setDigit(pair[1],+s[1]);
-}
-const dgH = makePair('dg-hh');
-const dgM = makePair('dg-mm');
-const dgS = makePair('dg-ss');
+setInterval(upd,1000);upd();
+changeStyle("'KoPubWorld Dotum Bold',sans-serif");
+changeSize(70);
+changeBrightness(220);
 
-// ── 시계 ──────────────────────────────────────────────────
-let showSec = true;
-function updateClock() {
-  const now = new Date();
-  setNum(dgH, now.getHours());
-  setNum(dgM, now.getMinutes());
-  if (showSec) setNum(dgS, now.getSeconds());
-  checkAlarms(now);
-}
-setInterval(updateClock, 1000);
-updateClock();
-
-// ── 패널 (창 높이 동적 조절) ──────────────────────────────
-const PANEL_HEIGHTS = { alarm: 230, countdown: 220, settings: 210 };
-const CLOCK_H = 90;
-
-function openPanel(name) {
-  closeCtxMenu();
-  document.querySelectorAll('#panel-area .panel').forEach(p => p.style.display = 'none');
-  document.getElementById('panel-' + name).style.display = 'block';
-  document.getElementById('panel-area').style.display = 'block';
-  setWinHeight(CLOCK_H + (PANEL_HEIGHTS[name] || 200));
-}
-function closePanel() {
-  document.getElementById('panel-area').style.display = 'none';
-  document.querySelectorAll('#panel-area .panel').forEach(p => p.style.display = 'none');
-  setWinHeight(CLOCK_H);
+function adjustHeight(){
+  const h=document.getElementById('clock-area').offsetHeight;
+  invoke('set_window_height',{height:h});
 }
 
-// ── 우클릭 메뉴 ──────────────────────────────────────────
-const ctxMenu = document.getElementById('ctx-menu');
-document.addEventListener('contextmenu', e => {
-  e.preventDefault();
-  ctxMenu.style.display = 'block';
-  let x = e.clientX, y = e.clientY;
-  if (x + 140 > window.innerWidth) x = window.innerWidth - 140;
-  if (y + 180 > window.innerHeight) y = Math.max(0, e.clientY - 180);
-  ctxMenu.style.left = x + 'px';
-  ctxMenu.style.top = y + 'px';
-});
-document.addEventListener('click', e => { if (!ctxMenu.contains(e.target)) closeCtxMenu(); });
-function closeCtxMenu() { ctxMenu.style.display = 'none'; }
-
-// ── 설정 ──────────────────────────────────────────────────
-let pinned = true;
-function togglePin() {
-  const t = document.getElementById('tog-pin');
-  t.classList.toggle('on');
-  pinned = t.classList.contains('on');
-  invoke('set_always_on_top', { onTop: pinned });
-}
-function toggleSec() {
-  const t = document.getElementById('tog-sec');
-  t.classList.toggle('on');
-  showSec = t.classList.contains('on');
-  document.getElementById('dg-ss').style.display = showSec ? '' : 'none';
-  document.getElementById('ss-colon').style.display = showSec ? '' : 'none';
-}
-function setBrightness(v) {
-  const c = Math.round(v);
-  const color = `rgb(${c},${c},${c})`;
-  document.querySelectorAll('.seg:not(.off)').forEach(s => s.style.background = color);
-  document.querySelectorAll('.dot').forEach(d => d.style.background = color);
+function toggleSec(){
+  const tog=document.getElementById('tog-sec');
+  tog.classList.toggle('off');
+  showSec=!tog.classList.contains('off');
+  document.getElementById('ds').style.display=showSec?'flex':'none';
+  document.getElementById('colon2').style.display=showSec?'flex':'none';
+  upd();
 }
 
-// ── 알람 ──────────────────────────────────────────────────
-let alarms = JSON.parse(localStorage.getItem('k_alarms')||'[]');
-function saveAlarms() { localStorage.setItem('k_alarms', JSON.stringify(alarms)); }
-window.addAlarm = function() {
-  const t = document.getElementById('alarm-time').value;
-  const l = document.getElementById('alarm-label').value || '알람';
-  if (!t) return;
-  alarms.push({time:t,label:l,fired:false});
-  saveAlarms(); renderAlarms();
-};
-function renderAlarms() {
-  document.getElementById('alarm-list').innerHTML = alarms.map((a,i) =>
-    `<div class="alarm-item"><span>${a.time} · ${a.label}</span><span class="alarm-del" onclick="removeAlarm(${i})">✕</span></div>`
-  ).join('');
+function toggleAlwaysOnTop(){
+  const tog=document.getElementById('tog-pin');
+  tog.classList.toggle('off');
+  const on=!tog.classList.contains('off');
+  invoke('set_always_on_top',{on_top:on});
 }
-window.removeAlarm = function(i) { alarms.splice(i,1); saveAlarms(); renderAlarms(); };
-function checkAlarms(now) {
-  if (now.getSeconds()!==0) return;
-  const hhmm = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-  alarms.forEach((a,i) => {
-    if (a.time===hhmm && !a.fired) {
-      a.fired=true; saveAlarms();
-      alert(`⏰ ${a.label}`);
-      setTimeout(()=>{alarms[i].fired=false;saveAlarms();},61000);
-    }
+
+function openPanel(name){
+  hideMenu();
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('open'));
+  document.getElementById('panel-'+name).classList.add('open');
+  setTimeout(adjustHeight,10);
+}
+function closePanel(){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('open'));
+  setTimeout(adjustHeight,10);
+}
+
+function changeStyle(v){
+  const seg=document.getElementById('seg-wrap');
+  if(v==='7seg'){ seg.style.display='flex'; txtClock.style.display='none'; }
+  else { seg.style.display='none'; txtClock.style.display='block'; txtClock.style.fontFamily=v; }
+}
+
+function changeSize(v){
+  txtClock.style.fontSize=v+'px';
+  const scale=v/40;
+  const sw=document.getElementById('seg-wrap');
+  sw.style.transform=`scale(${scale})`;
+  sw.style.transformOrigin='center';
+}
+
+function changeBrightness(v){
+  brightness=Math.round(Number(v));
+  const hex=brightness.toString(16).padStart(2,'0');
+  const c='#'+hex+hex+hex;
+  document.getElementById('seg-wrap').querySelectorAll('.seg,.dot').forEach(s=>s.style.background=c);
+  txtClock.style.color=c;
+  document.querySelectorAll('.panel-title,.setting-row span,.alarm-item,.empty-msg,#cd-display,.cd-btns button,.alarm-row input,.btn-add,.cd-row input,.cd-row span').forEach(el=>el.style.color=c);
+  document.querySelectorAll('.close-panel').forEach(el=>el.style.color=c+'88');
+}
+
+// ── 알람 ──
+function triggerAlarm(){
+  if(flashTimer) return;
+  const cr=document.getElementById('clock-area');
+  cr.classList.add('flashing');
+  flashTimer=setTimeout(()=>{ cr.classList.remove('flashing'); flashTimer=null; },10000);
+}
+function addAlarm(){
+  const t=document.getElementById('alarm-time').value;
+  const name=document.getElementById('alarm-name').value.trim()||'알람';
+  if(!t) return;
+  alarms.push({id:Date.now(),t,name,enabled:true});
+  document.getElementById('alarm-name').value='';
+  renderAlarms();
+}
+function toggleAlarm(id){ const a=alarms.find(x=>x.id===id); if(a) a.enabled=!a.enabled; renderAlarms(); }
+function removeAlarm(id){ alarms.splice(alarms.findIndex(a=>a.id===id),1); renderAlarms(); }
+function renderAlarms(){
+  const list=document.getElementById('alarm-list');
+  const empty=document.getElementById('alarm-empty');
+  list.innerHTML='';
+  if(!alarms.length){empty.style.display='block';return;}
+  empty.style.display='none';
+  const hex=brightness.toString(16).padStart(2,'0');
+  const c='#'+hex+hex+hex;
+  alarms.forEach(a=>{
+    const div=document.createElement('div');
+    div.className='alarm-item';
+    div.style.color=c;
+    div.innerHTML=`<span class="alarm-label">${a.t} ${a.name}</span><div class="alarm-toggle ${a.enabled?'on':''}" onclick="toggleAlarm(${a.id})"></div><button class="alarm-del" onclick="removeAlarm(${a.id})">✕</button>`;
+    list.appendChild(div);
   });
 }
-renderAlarms();
 
-// ── 카운트다운 ────────────────────────────────────────────
-let cdRemain=0, cdTimer=null, cdRunning=false;
-function cdFmt(s) {
-  return `${String(Math.floor(s/3600)).padStart(2,'0')}:${String(Math.floor((s%3600)/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
-}
-window.startCd = function() {
-  if (cdRunning) return;
-  if (cdRemain===0) {
-    cdRemain=(parseInt(document.getElementById('cd-h').value)||0)*3600
-            +(parseInt(document.getElementById('cd-m').value)||0)*60
-            +(parseInt(document.getElementById('cd-s').value)||0);
+// ── 카운트다운 ──
+let cdRemain=0,cdTimer=null,cdRunning=false;
+function cdStart(){
+  if(!cdRunning&&cdRemain===0){
+    const h=parseInt(document.getElementById('cd-h').value)||0;
+    const m=parseInt(document.getElementById('cd-m').value)||0;
+    const s=parseInt(document.getElementById('cd-s').value)||0;
+    cdRemain=h*3600+m*60+s;
   }
-  if (cdRemain<=0) return;
-  cdRunning=true;
-  cdTimer=setInterval(()=>{
-    cdRemain--;
-    document.getElementById('cd-display').textContent=cdFmt(cdRemain);
-    if (cdRemain<=0){clearInterval(cdTimer);cdRunning=false;alert('⏱ 카운트다운 완료!');}
-  },1000);
-};
-window.pauseCd = function(){clearInterval(cdTimer);cdTimer=null;cdRunning=false;};
-window.resetCd = function(){window.pauseCd();cdRemain=0;document.getElementById('cd-display').textContent='00:00:00';};
+  if(!cdRemain) return;
+  cdRunning=true; clearInterval(cdTimer);
+  cdTimer=setInterval(()=>{ if(cdRemain<=0){clearInterval(cdTimer);cdRunning=false;triggerAlarm();return;} cdRemain--; renderCd(); },1000);
+}
+function cdPause(){cdRunning=false;clearInterval(cdTimer);}
+function cdReset(){cdPause();cdRemain=0;document.getElementById('cd-display').textContent='00:00:00';}
+function renderCd(){
+  const h=Math.floor(cdRemain/3600),m=Math.floor((cdRemain%3600)/60),s=cdRemain%60;
+  document.getElementById('cd-display').textContent=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+// ── 드래그 (Tauri) ──
+document.getElementById('clock-row').addEventListener('mousedown',function(e){
+  if(e.button!==0||e.target.closest('button,input,select,.toggle,.alarm-toggle')) return;
+  invoke('start_dragging');
+  e.preventDefault();
+});
+
+// ── 우클릭 메뉴 ──
+const menu=document.getElementById('ctx-menu');
+document.getElementById('clock-area').addEventListener('contextmenu',function(e){
+  e.preventDefault();
+  menu.style.display='block';
+  menu.style.left=e.clientX+'px';
+  menu.style.top=e.clientY+'px';
+});
+document.addEventListener('mousedown',function(e){ if(!e.target.closest('#ctx-menu')) hideMenu(); });
+function hideMenu(){ menu.style.display='none'; }
+function closeApp(){ hideMenu(); invoke('close_app'); }
 </script>
 </body>
 </html>

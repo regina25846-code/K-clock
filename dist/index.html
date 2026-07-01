@@ -357,6 +357,7 @@ document.getElementById('clock-row').addEventListener('click',function(){
 });
 document.getElementById('clock-area').addEventListener('mousedown',function(e){
   if(e.button!==0) return;
+  if(flashTimer) return;
   if(e.target.closest('button,input,select,.toggle,.alarm-toggle,.panel,#ctx-menu')) return;
   invoke('start_dragging');
   e.preventDefault();

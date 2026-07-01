@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>K-Clock 다운로드</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"/>
+<style>
+  :root {
+    --bg: #f4f6fb; --bg2: #ffffff; --bg3: #eef0f8;
+    --accent: #2962ff; --border: #dde0ef;
+    --text: #1a1d2e; --text2: #4a4d60; --text3: #888ba0;
+    --green: #00897b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Pretendard', 'Noto Sans KR', 'Segoe UI', sans-serif; padding: 0; letter-spacing: -0.01em; }
+
+  .header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 20px 0; }
+  .header-inner { max-width: 720px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; gap: 16px; }
+  .logo { font-size: 20px; font-weight: 900; color: var(--text); }
+  .header-sub { font-size: 14px; color: var(--text3); margin-top: 2px; }
+
+  .container { max-width: 720px; margin: 0 auto; padding: 40px 24px; }
+
+  .version-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 28px; margin-bottom: 32px; }
+  .ver-row { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+  .ver-badge { background: var(--accent); color: #fff; font-size: 20px; font-weight: 800; padding: 6px 18px; border-radius: 20px; }
+  .ver-date { color: var(--text3); font-size: 16px; }
+  .dl-btn {
+    margin-left: auto;
+    background: var(--accent); color: #fff; border: none; border-radius: 8px;
+    padding: 12px 28px; font-size: 17px; font-weight: 700; cursor: pointer;
+    text-decoration: none; display: inline-block;
+    transition: background .15s;
+  }
+  .dl-btn:hover { background: #1e4fd8; }
+
+  .changelog { font-size: 15px; color: var(--text2); margin-bottom: 16px; }
+
+  .how-to { background: var(--bg3); border-radius: 10px; padding: 16px 20px; margin-top: 16px; }
+  .how-to h4 { font-size: 15px; font-weight: 700; margin-bottom: 10px; color: var(--text2); }
+  .how-to ol { padding-left: 18px; font-size: 15px; line-height: 2; color: var(--text2); }
+  .how-to code { background: var(--bg); padding: 1px 6px; border-radius: 4px; font-size: 14px; color: var(--green); }
+
+  .features { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 28px; margin-bottom: 32px; }
+  .features h3 { font-size: 17px; font-weight: 700; margin-bottom: 18px; }
+  .feat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .feat-item { background: var(--bg3); border-radius: 10px; padding: 14px 16px; }
+  .feat-item strong { display: block; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .feat-item span { font-size: 13px; color: var(--text2); }
+
+  .history-section > summary {
+    cursor: pointer; padding: 14px 18px; background: var(--bg2);
+    border: 1px solid var(--border); border-radius: 10px;
+    font-weight: 800; font-size: 17px; list-style: none;
+    display: flex; align-items: center; gap: 10px;
+    transition: background .15s;
+  }
+  .history-section > summary:hover { background: var(--bg3); }
+  .history-section[open] > summary { border-radius: 10px 10px 0 0; border-bottom: none; }
+  .history-body { border: 1px solid var(--border); border-top: none; border-radius: 0 0 10px 10px; background: var(--bg2); padding: 4px 0; }
+  .ver-entry { padding: 14px 20px; border-bottom: 1px solid var(--border); }
+  .ver-entry:last-child { border-bottom: none; }
+  .ver-entry-hdr { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .ver-num { color: var(--accent); font-weight: 700; }
+  .ver-dt { color: var(--text3); font-size: 15px; margin-left: auto; }
+  .ver-entry ul { padding-left: 18px; font-size: 15px; line-height: 2.1; color: var(--text2); }
+
+  .footer { text-align: center; color: var(--text3); font-size: 14px; margin-top: 60px; padding-bottom: 40px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <svg width="44" height="44" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
+      <defs>
+        <linearGradient id="bg-g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#f0f4ff"/>
+          <stop offset="100%" stop-color="#e8eeff"/>
+        </linearGradient>
+        <linearGradient id="cl-g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#3b82f6"/>
+          <stop offset="100%" stop-color="#6366f1"/>
+        </linearGradient>
+      </defs>
+      <rect width="120" height="120" rx="26" fill="url(#bg-g)"/>
+      <rect x="4" y="4" width="112" height="112" rx="22" fill="none" stroke="url(#cl-g)" stroke-width="2" opacity="0.35"/>
+      <circle cx="60" cy="60" r="32" fill="none" stroke="url(#cl-g)" stroke-width="5" opacity="0.9"/>
+      <line x1="60" y1="60" x2="60" y2="35" stroke="url(#cl-g)" stroke-width="4" stroke-linecap="round"/>
+      <line x1="60" y1="60" x2="80" y2="68" stroke="url(#cl-g)" stroke-width="3.5" stroke-linecap="round"/>
+      <circle cx="60" cy="60" r="4" fill="url(#cl-g)"/>
+    </svg>
+    <div>
+      <div class="logo">K-Clock</div>
+      <div class="header-sub">Windows 투명 플로팅 디지털 시계</div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="version-card">
+    <div class="ver-row">
+      <span class="ver-badge">v1.0.0</span>
+      <span class="ver-date">2026-07-01</span>
+      <a class="dl-btn" href="https://github.com/regina25846-code/K-clock/releases/latest" target="_blank">⬇ 다운로드</a>
+    </div>
+    <div class="changelog">KoPubWorld Bold 기본 폰트 적용, 알람·카운트다운·설정 패널, 밝기·크기 슬라이더</div>
+
+    <div class="how-to">
+      <h4>📦 설치 방법</h4>
+      <ol>
+        <li>위 다운로드 버튼 클릭 → GitHub 페이지에서 <code>K-Clock_x64-setup.exe</code> 다운로드</li>
+        <li>exe 파일 실행</li>
+        <li>Windows 보호 경고가 뜨면 <strong>"추가 정보"</strong> 클릭 후 <strong>"실행"</strong></li>
+        <li>설치 완료 후 바탕화면에서 K-Clock 실행</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="features">
+    <h3>주요 기능</h3>
+    <div class="feat-grid">
+      <div class="feat-item"><strong>🪟 투명 배경</strong><span>바탕화면이 그대로 보이는 투명 시계</span></div>
+      <div class="feat-item"><strong>📌 항상 위</strong><span>다른 창 위에 항상 표시</span></div>
+      <div class="feat-item"><strong>⏰ 알람</strong><span>시간+이름 설정, 활성화 토글, 시계 깜빡임 알림</span></div>
+      <div class="feat-item"><strong>⏱ 카운트다운</strong><span>시/분/초 타이머, 시작·일시정지·초기화</span></div>
+      <div class="feat-item"><strong>🔤 폰트 8종</strong><span>KoPubWorld, 맑은 고딕, 굴림, 나눔고딕 등</span></div>
+      <div class="feat-item"><strong>🎨 밝기·크기</strong><span>슬라이더로 세밀하게 조정</span></div>
+    </div>
+  </div>
+
+  <div class="version-card" style="font-size:15px;color:var(--text2);">
+    <h3 style="font-size:17px;font-weight:700;margin-bottom:14px;">사용 방법</h3>
+    <ul style="padding-left:18px;line-height:2.2;">
+      <li><strong>메뉴 열기</strong> — 시계 위에서 우클릭</li>
+      <li><strong>위치 이동</strong> — 시계 드래그</li>
+      <li><strong>알람 설정</strong> — 우클릭 → 알람 → 시간·이름 입력 후 추가</li>
+      <li><strong>카운트다운</strong> — 우클릭 → 카운트다운 → 시/분/초 입력 후 시작</li>
+      <li><strong>폰트·크기·밝기</strong> — 우클릭 → 설정</li>
+    </ul>
+  </div>
+
+  <details class="history-section">
+    <summary>📋 버전별 업데이트 내역</summary>
+    <div class="history-body">
+      <div class="ver-entry">
+        <div class="ver-entry-hdr"><span class="ver-num">v1.0.0</span><span class="ver-dt">2026-07-01</span></div>
+        <ul>
+          <li>최초 릴리즈</li>
+          <li>투명 배경 플로팅 시계, 드래그 이동</li>
+          <li>알람 (시간+이름, 활성화 토글, 시계 깜빡임)</li>
+          <li>카운트다운 타이머</li>
+          <li>폰트 8종 선택, 크기·밝기 슬라이더</li>
+          <li>항상 위·초 표시 토글</li>
+          <li>트레이 아이콘 (숨기기·보이기·종료)</li>
+        </ul>
+      </div>
+    </div>
+  </details>
+
+  <div class="footer">K-Clock · KrisB · Windows 10/11 64bit</div>
+</div>
+</body>
+</html>

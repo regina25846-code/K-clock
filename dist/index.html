@@ -268,7 +268,11 @@ function toggleAlwaysOnTop(){
 
 async function openPanel(name){
   hideMenu();
-  if(!lockedPos) lockedPos=await invoke('get_window_pos');
+  if(!lockedPos){
+    const pos=await invoke('get_window_pos');
+    const cx=pos[0]+Math.round(window.innerWidth/2);
+    lockedPos={x:pos[0],y:pos[1],cx:cx};
+  }
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('open'));
   document.getElementById('panel-'+name).classList.add('open');
   setTimeout(adjustHeight,10);
@@ -298,7 +302,10 @@ async function changeSize(v){
   const w=Math.max(300, Math.round(v*5.8)+40);
   const totalH=document.getElementById('clock-area').offsetHeight;
   await invoke('set_window_size',{width:w,height:totalH});
-  if(lockedPos) await invoke('set_window_pos',{x:lockedPos[0],y:lockedPos[1]});
+  if(lockedPos){
+    const newX=Math.max(0, lockedPos.cx - Math.round(w/2));
+    await invoke('set_window_pos',{x:newX,y:lockedPos.y});
+  }
 }
 
 function changeBrightness(v){

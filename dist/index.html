@@ -208,6 +208,7 @@ const txtClock=document.getElementById('text-clock');
 const alarms=[];
 let flashTimer=null;
 let repeatMode=false;
+let sizeDebounce=null;
 function toggleRepeatBtn(){
   repeatMode=!repeatMode;
   document.getElementById('btn-repeat').classList.toggle('active',repeatMode);
@@ -280,7 +281,6 @@ function changeStyle(v){
   else { seg.style.display='none'; txtClock.style.display='block'; txtClock.style.fontFamily=v; }
 }
 
-let sizeDebounce=null;
 function changeSize(v){
   txtClock.style.fontSize=v+'px';
   const scale=v/40;

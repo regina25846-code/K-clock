@@ -404,12 +404,19 @@ document.getElementById('clock-row').addEventListener('click',function(){
   if(flashTimer) stopAlarm();
 });
 const clockArea=document.getElementById('clock-area');
-clockArea.addEventListener('dblclick',function(e){
+let _lastClickTime=0;
+clockArea.addEventListener('click',function(e){
   if(e.target.closest('button,input,select,.toggle,.alarm-toggle,.panel,#ctx-menu,#info-dialog')) return;
-  const inv=255-brightness;
-  changeBrightness(inv);
-  document.getElementById('brightness-slider').value=inv;
-  document.getElementById('bright-val').textContent=inv;
+  const now=Date.now();
+  if(now-_lastClickTime<350){
+    _lastClickTime=0;
+    const inv=255-brightness;
+    changeBrightness(inv);
+    document.getElementById('brightness-slider').value=inv;
+    document.getElementById('bright-val').textContent=inv;
+  } else {
+    _lastClickTime=now;
+  }
 });
 clockArea.addEventListener('mousedown',function(e){
   if(e.button!==0) return;

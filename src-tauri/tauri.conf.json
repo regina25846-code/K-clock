@@ -25,9 +25,11 @@
         "shadow": false
       }
     ],
+    "withGlobalTauri": true,
     "security": {
       "csp": null
     },
+    "macOSPrivateApi": true,
     "trayIcon": {
       "id": "main",
       "iconPath": "icons/icon.ico",

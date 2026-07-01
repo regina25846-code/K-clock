@@ -28,11 +28,7 @@ fn start_dragging(window: tauri::Window) {
 
 #[tauri::command]
 fn set_window_height(window: tauri::Window, height: u32) {
-    if let Ok(size) = window.outer_size() {
-        let scale = window.scale_factor().unwrap_or(1.0);
-        let w = (size.width as f64 / scale).round() as u32;
-        let _ = window.set_size(tauri::Size::Logical(tauri::LogicalSize { width: w as f64, height: height as f64 }));
-    }
+    let _ = window.set_size(tauri::Size::Logical(tauri::LogicalSize { width: 300.0, height: height as f64 }));
 }
 
 fn main() {

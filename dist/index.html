@@ -9,9 +9,9 @@
 @font-face { font-family:'KoPubWorld Dotum Bold'; src:url('fonts/KoPubWorld Dotum Bold.ttf'); }
 
 * { margin:0; padding:0; box-sizing:border-box; user-select:none; -webkit-user-select:none; }
-body { background:transparent; font-family:'Segoe UI',sans-serif; overflow:hidden; }
+body { background:rgba(0,0,0,0.01); font-family:'Segoe UI',sans-serif; overflow:hidden; }
 
-#clock-area { width:300px; display:flex; flex-direction:column; align-items:center; cursor:grab; }
+#clock-area { width:300px; display:flex; flex-direction:column; align-items:center; cursor:grab; background:rgba(0,0,0,0.01); }
 #clock-area.dragging { cursor:grabbing; }
 #clock-row { height:90px; display:flex; align-items:center; justify-content:center; width:100%; }
 
@@ -30,7 +30,7 @@ body { background:transparent; font-family:'Segoe UI',sans-serif; overflow:hidde
 #text-clock { font-size:52px; color:#b8b8b8; letter-spacing:2px; font-weight:300; line-height:1; display:none; white-space:nowrap; }
 
 /* 패널 */
-.panel { width:300px; background:rgba(0,0,0,0.72); border-radius:0 0 10px 10px; padding:10px 14px; position:relative; display:none; }
+.panel { width:300px; background:rgba(0,0,0,0.5); border-radius:0 0 10px 10px; padding:10px 14px; position:relative; display:none; backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); }
 .panel.open { display:block; }
 .panel-title { font-size:14px; color:rgba(184,184,184,0.9); font-weight:600; margin-bottom:10px; }
 .close-panel { position:absolute; top:8px; right:10px; color:rgba(184,184,184,0.5); font-size:13px; background:none; border:none; cursor:pointer; }
@@ -66,6 +66,8 @@ body { background:transparent; font-family:'Segoe UI',sans-serif; overflow:hidde
 .toggle.off::after { left:2px; }
 .toggle.off { background:#333; }
 select { background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:5px; color:#b8b8b8; padding:3px 6px; font-size:11px; outline:none; cursor:pointer; }
+.color-btn { padding:3px 9px; border:1px solid rgba(255,255,255,0.18); border-radius:4px; font-size:11px; cursor:pointer; background:transparent; color:#b8b8b8; }
+.color-btn.active { border-color:#aaa; background:rgba(255,255,255,0.15); }
 
 /* 우클릭 메뉴 */
 #ctx-menu { position:fixed; background:rgba(22,22,22,0.97); border:1px solid rgba(255,255,255,0.09); border-radius:9px; padding:5px 0; min-width:130px; box-shadow:0 6px 20px rgba(0,0,0,0.7); display:none; z-index:1000; }
@@ -156,6 +158,20 @@ select { background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.
         <span id="bright-val" style="font-size:11px;min-width:22px;text-align:right">220</span>
       </div>
     </div>
+    <div class="setting-row">
+      <span>패널 투명도</span>
+      <div style="display:flex;align-items:center;gap:5px">
+        <input type="range" min=0 max=100 value=50 id="panel-opacity-slider" style="width:70px;accent-color:#888" oninput="changePanelOpacity(this.value);document.getElementById('panel-op-val').textContent=this.value">
+        <span id="panel-op-val" style="font-size:11px;min-width:22px;text-align:right">50</span>
+      </div>
+    </div>
+    <div class="setting-row">
+      <span>패널 색상</span>
+      <div style="display:flex;gap:5px">
+        <button class="color-btn active" id="btn-black" onclick="changePanelColor('black')">검정</button>
+        <button class="color-btn" id="btn-white" onclick="changePanelColor('white')">흰색</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -179,7 +195,7 @@ function sd(el,n){const on=SEGS[n]||'';el.querySelectorAll('.seg').forEach(s=>s.
 function sn(p,n){const s=String(n).padStart(2,'0');sd(p[0],+s[0]);sd(p[1],+s[1]);}
 const ph=mp('dh'),pm=mp('dm'),ps=mp('ds');
 
-let showSec=true, brightness=220;
+let showSec=true, brightness=220, panelColor='black', panelOpacity=0.5;
 const txtClock=document.getElementById('text-clock');
 const alarms=[];
 let flashTimer=null;
@@ -311,23 +327,67 @@ function renderCd(){
 }
 
 // ── 드래그 (Tauri) ──
-document.getElementById('clock-row').addEventListener('mousedown',function(e){
-  if(e.button!==0||e.target.closest('button,input,select,.toggle,.alarm-toggle')) return;
+document.getElementById('clock-area').addEventListener('mousedown',function(e){
+  if(e.button!==0) return;
+  if(e.target.closest('button,input,select,.toggle,.alarm-toggle,.panel,#ctx-menu')) return;
   invoke('start_dragging');
   e.preventDefault();
 });
 
 // ── 우클릭 메뉴 ──
 const menu=document.getElementById('ctx-menu');
-document.getElementById('clock-area').addEventListener('contextmenu',function(e){
+document.getElementById('clock-area').addEventListener('contextmenu',async function(e){
   e.preventDefault();
+  menu.style.visibility='hidden';
   menu.style.display='block';
-  menu.style.left=e.clientX+'px';
-  menu.style.top=e.clientY+'px';
+  menu.style.top='-9999px';
+  const menuH=menu.offsetHeight;
+  const menuW=menu.offsetWidth;
+  menu.style.display='none';
+  menu.style.visibility='';
+  const mx=Math.min(e.clientX, 300-menuW-2);
+  const my=e.clientY;
+  await invoke('set_window_height',{height:my+menuH+4});
+  await new Promise(r=>setTimeout(r,60));
+  menu.style.left=mx+'px';
+  menu.style.top=my+'px';
+  menu.style.display='block';
 });
-document.addEventListener('mousedown',function(e){ if(!e.target.closest('#ctx-menu')) hideMenu(); });
-function hideMenu(){ menu.style.display='none'; }
+document.addEventListener('mousedown',function(e){ if(e.button!==0) return; if(!e.target.closest('#ctx-menu')) hideMenu(); });
+function hideMenu(){
+  menu.style.display='none';
+  if(!document.querySelector('.panel.open')) setTimeout(adjustHeight,10);
+}
 function closeApp(){ hideMenu(); invoke('close_app'); }
+
+function updatePanelBg(){
+  const rgb=panelColor==='black'?'0,0,0':'255,255,255';
+  document.querySelectorAll('.panel').forEach(p=>p.style.background=`rgba(${rgb},${panelOpacity})`);
+}
+function changePanelOpacity(v){
+  panelOpacity=v/100;
+  updatePanelBg();
+  localStorage.setItem('panelOpacity',v);
+}
+function changePanelColor(c){
+  panelColor=c;
+  document.getElementById('btn-black').classList.toggle('active',c==='black');
+  document.getElementById('btn-white').classList.toggle('active',c==='white');
+  updatePanelBg();
+  localStorage.setItem('panelColor',c);
+}
+
+// 설정 복원
+(function(){
+  const c=localStorage.getItem('panelColor')||'black';
+  const op=parseInt(localStorage.getItem('panelOpacity')||'50');
+  panelColor=c; panelOpacity=op/100;
+  document.getElementById('panel-opacity-slider').value=op;
+  document.getElementById('panel-op-val').textContent=op;
+  document.getElementById('btn-black').classList.toggle('active',c==='black');
+  document.getElementById('btn-white').classList.toggle('active',c==='white');
+  updatePanelBg();
+})();
 </script>
 </body>
 </html>

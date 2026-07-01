@@ -232,10 +232,16 @@ changeStyle("'KoPubWorld Dotum Bold',sans-serif");
 changeSize(70);
 changeBrightness(220);
 
-// 자동 시작 상태 로드
+// 자동 시작 상태 로드 (첫 실행 시 기본값 켜짐)
 invoke('get_autostart').then(on=>{
   const tog=document.getElementById('tog-auto');
-  if(on) tog.classList.remove('off'); else tog.classList.add('off');
+  if(!localStorage.getItem('autostart_init')){
+    localStorage.setItem('autostart_init','1');
+    invoke('set_autostart',{enabled:true});
+    tog.classList.remove('off');
+  } else {
+    if(on) tog.classList.remove('off'); else tog.classList.add('off');
+  }
 });
 
 function adjustHeight(){
@@ -404,27 +410,31 @@ document.getElementById('clock-row').addEventListener('click',function(){
   if(flashTimer) stopAlarm();
 });
 const clockArea=document.getElementById('clock-area');
-let _lastClickTime=0;
-clockArea.addEventListener('click',function(e){
+let _mdPos=null,_lastMdTime=0,_dragStarted=false;
+clockArea.addEventListener('mousedown',function(e){
+  if(e.button!==0) return;
+  if(flashTimer) return;
   if(e.target.closest('button,input,select,.toggle,.alarm-toggle,.panel,#ctx-menu,#info-dialog')) return;
   const now=Date.now();
-  if(now-_lastClickTime<350){
-    _lastClickTime=0;
+  if(now-_lastMdTime<350){
+    _lastMdTime=0; _mdPos=null;
     const inv=255-brightness;
     changeBrightness(inv);
     document.getElementById('brightness-slider').value=inv;
     document.getElementById('bright-val').textContent=inv;
-  } else {
-    _lastClickTime=now;
+    e.preventDefault(); return;
   }
-});
-clockArea.addEventListener('mousedown',function(e){
-  if(e.button!==0) return;
-  if(flashTimer) return;
-  if(e.target.closest('button,input,select,.toggle,.alarm-toggle,.panel,#ctx-menu')) return;
-  invoke('start_dragging');
+  _lastMdTime=now; _mdPos={x:e.clientX,y:e.clientY}; _dragStarted=false;
   e.preventDefault();
 });
+clockArea.addEventListener('mousemove',function(e){
+  if(!_mdPos||_dragStarted) return;
+  if(Math.abs(e.clientX-_mdPos.x)>3||Math.abs(e.clientY-_mdPos.y)>3){
+    _dragStarted=true; _mdPos=null;
+    invoke('start_dragging');
+  }
+});
+clockArea.addEventListener('mouseup',function(){ _mdPos=null; _dragStarted=false; });
 
 // ── 우클릭 메뉴 ──
 const menu=document.getElementById('ctx-menu');

@@ -71,11 +71,13 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .setup(|app| {
-            let quit = MenuItem::with_id(app, "quit", "종료", true, None::<&str>)?;
             let show = MenuItem::with_id(app, "show", "K-Clock 보이기", true, None::<&str>)?;
-            let hide = MenuItem::with_id(app, "hide", "숨기기", true, None::<&str>)?;
-            let sep = PredefinedMenuItem::separator(app)?;
-            let menu = Menu::with_items(app, &[&show, &hide, &sep, &quit])?;
+            let sep1 = PredefinedMenuItem::separator(app)?;
+            let settings = MenuItem::with_id(app, "settings", "설정", true, None::<&str>)?;
+            let info = MenuItem::with_id(app, "info", "프로그램 정보", true, None::<&str>)?;
+            let sep2 = PredefinedMenuItem::separator(app)?;
+            let quit = MenuItem::with_id(app, "quit", "프로그램 종료", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show, &sep1, &settings, &info, &sep2, &quit])?;
 
             TrayIconBuilder::with_id("main")
                 .icon(app.default_window_icon().unwrap().clone())
@@ -88,9 +90,18 @@ fn main() {
                             let _ = win.set_focus();
                         }
                     }
-                    "hide" => {
+                    "settings" => {
                         if let Some(win) = app.get_webview_window("main") {
-                            let _ = win.hide();
+                            let _ = win.show();
+                            let _ = win.set_focus();
+                            let _ = win.eval("openPanel('settings')");
+                        }
+                    }
+                    "info" => {
+                        if let Some(win) = app.get_webview_window("main") {
+                            let _ = win.show();
+                            let _ = win.set_focus();
+                            let _ = win.eval("showInfo()");
                         }
                     }
                     _ => {}

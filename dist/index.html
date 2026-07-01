@@ -377,7 +377,7 @@ function renderCd(){
 document.getElementById('clock-row').addEventListener('click',function(){
   if(flashTimer) stopAlarm();
 });
-document.getElementById('clock-area').addEventListener('mousedown',function(e){
+document.addEventListener('mousedown',function(e){
   if(e.button!==0) return;
   if(flashTimer) return;
   if(e.target.closest('button,input,select,.toggle,.alarm-toggle,.panel,#ctx-menu')) return;
@@ -387,7 +387,8 @@ document.getElementById('clock-area').addEventListener('mousedown',function(e){
 
 // ── 우클릭 메뉴 ──
 const menu=document.getElementById('ctx-menu');
-document.getElementById('clock-area').addEventListener('contextmenu',async function(e){
+document.addEventListener('contextmenu',async function(e){
+  if(e.target.closest('button,input,select,.toggle,.alarm-toggle,.panel,#ctx-menu')) return;
   e.preventDefault();
   menu.style.visibility='hidden';
   menu.style.display='block';
@@ -396,7 +397,8 @@ document.getElementById('clock-area').addEventListener('contextmenu',async funct
   const menuW=menu.offsetWidth;
   menu.style.display='none';
   menu.style.visibility='';
-  const mx=Math.min(e.clientX, 300-menuW-2);
+  const winW=window.innerWidth;
+  const mx=Math.min(e.clientX, winW-menuW-2);
   const my=e.clientY;
   await invoke('set_window_height',{height:my+menuH+4});
   await new Promise(r=>setTimeout(r,60));

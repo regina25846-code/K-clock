@@ -20,7 +20,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    -webkit-app-region: drag;
+    -webkit-app-region: none;
     cursor: move;
   }
 
@@ -62,7 +62,7 @@
     gap: 8px;
     padding: 0 5px;
     padding-bottom: 3px;
-    -webkit-app-region: drag;
+    -webkit-app-region: none;
   }
   .dot {
     width: 4px; height: 4px;
@@ -271,6 +271,11 @@ const invoke = (...a) => window.__TAURI__?.core?.invoke(...a) ?? Promise.resolve
 function setWinHeight(h) {
   invoke('set_window_height', { height: h });
 }
+
+// 드래그 — 좌클릭으로만 창 이동
+document.getElementById('clock-area').addEventListener('mousedown', e => {
+  if (e.button === 0) invoke('start_dragging');
+});
 
 // ── 7세그먼트 ──────────────────────────────────────────────
 const SEGS = {

@@ -22,6 +22,11 @@ fn close_app(app: tauri::AppHandle) {
 }
 
 #[tauri::command]
+fn start_dragging(window: tauri::Window) {
+    let _ = window.start_dragging();
+}
+
+#[tauri::command]
 fn set_window_height(window: tauri::Window, height: u32) {
     if let Ok(size) = window.outer_size() {
         let scale = window.scale_factor().unwrap_or(1.0);
@@ -83,6 +88,7 @@ fn main() {
             minimize_window,
             close_app,
             set_window_height,
+            start_dragging,
         ])
         .run(tauri::generate_context!())
         .expect("K-Clock 실행 실패");

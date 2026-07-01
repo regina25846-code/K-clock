@@ -377,7 +377,8 @@ function renderCd(){
 document.getElementById('clock-row').addEventListener('click',function(){
   if(flashTimer) stopAlarm();
 });
-document.addEventListener('mousedown',function(e){
+const clockArea=document.getElementById('clock-area');
+clockArea.addEventListener('mousedown',function(e){
   if(e.button!==0) return;
   if(flashTimer) return;
   if(e.target.closest('button,input,select,.toggle,.alarm-toggle,.panel,#ctx-menu')) return;
@@ -387,8 +388,7 @@ document.addEventListener('mousedown',function(e){
 
 // ── 우클릭 메뉴 ──
 const menu=document.getElementById('ctx-menu');
-document.addEventListener('contextmenu',async function(e){
-  if(e.target.closest('button,input,select,.toggle,.alarm-toggle,.panel,#ctx-menu')) return;
+clockArea.addEventListener('contextmenu',async function(e){
   e.preventDefault();
   menu.style.visibility='hidden';
   menu.style.display='block';

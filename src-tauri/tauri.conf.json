@@ -11,15 +11,18 @@
       {
         "label": "main",
         "title": "K-Clock",
-        "width": 380,
-        "height": 320,
-        "minWidth": 280,
-        "minHeight": 100,
+        "width": 300,
+        "height": 90,
+        "minWidth": 200,
+        "minHeight": 90,
         "decorations": false,
         "alwaysOnTop": true,
         "transparent": true,
-        "resizable": true,
-        "center": true
+        "resizable": false,
+        "maximizable": false,
+        "minimizable": false,
+        "center": true,
+        "shadow": false
       }
     ],
     "security": {

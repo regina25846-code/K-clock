@@ -13,11 +13,10 @@
     height: 100vh;
   }
 
-  /* ── 시계 영역 (드래그 가능) ── */
+  /* 시계 영역 — 전체 창 = 시계 크기 */
   #clock-area {
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 100px;
+    width: 100%;
+    height: 90px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -28,202 +27,184 @@
   #clock-wrap {
     display: flex;
     align-items: center;
-    gap: 2px;
   }
 
-  .digit-group { display: flex; gap: 4px; }
+  .digit-group { display: flex; gap: 3px; }
 
   /* 7세그먼트 */
   .seg-digit {
     position: relative;
-    width: 28px;
-    height: 50px;
-    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+    width: 22px;
+    height: 40px;
   }
   .seg {
     position: absolute;
-    background: #c8c8c8;
-    border-radius: 2px;
+    background: #b8b8b8;
+    border-radius: 1px;
     transition: opacity 0.05s;
   }
   .seg.off { opacity: 0; }
-  .seg-h { width: 20px; height: 4px; left: 4px; }
-  .seg-v { width: 4px; height: 18px; }
+  .seg-h { width: 16px; height: 3px; left: 3px; }
+  .seg-v { width: 3px; height: 14px; }
   .seg-a { top: 0; }
-  .seg-b { top: 4px; right: 0; }
-  .seg-c { bottom: 4px; right: 0; }
+  .seg-b { top: 3px; right: 0; }
+  .seg-c { bottom: 3px; right: 0; }
   .seg-d { bottom: 0; }
-  .seg-e { bottom: 4px; left: 0; }
-  .seg-f { top: 4px; left: 0; }
-  .seg-g { top: 23px; }
+  .seg-e { bottom: 3px; left: 0; }
+  .seg-f { top: 3px; left: 0; }
+  .seg-g { top: 18px; }
 
   /* 콜론 */
   .colon {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 10px;
+    gap: 8px;
     padding: 0 5px;
-    padding-bottom: 4px;
+    padding-bottom: 3px;
     -webkit-app-region: drag;
   }
   .dot {
-    width: 5px; height: 5px;
+    width: 4px; height: 4px;
     border-radius: 50%;
-    background: #c8c8c8;
-    filter: drop-shadow(0 1px 4px rgba(0,0,0,0.5));
+    background: #b8b8b8;
     animation: blink 1s step-end infinite;
   }
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
 
-  /* ── 패널 컨테이너 ── */
+  /* 패널 영역 — 시계 아래 */
   #panel-area {
-    position: absolute;
-    top: 100px; left: 0; right: 0; bottom: 0;
     display: none;
+    padding: 0 8px 8px 8px;
     -webkit-app-region: no-drag;
   }
 
-  /* 패널 공통 */
   .panel {
-    display: none;
-    background: rgba(18, 18, 18, 0.94);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 12px;
-    margin: 0 10px;
-    padding: 14px 16px;
+    background: rgba(20, 20, 20, 0.95);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px;
+    padding: 12px 14px;
     position: relative;
   }
-  .panel.active { display: block; }
 
   .panel-title {
-    font-size: 11px;
-    color: rgba(255,255,255,0.4);
+    font-size: 10px;
+    color: rgba(255,255,255,0.35);
     letter-spacing: 1px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     text-transform: uppercase;
     font-family: 'Segoe UI', sans-serif;
   }
 
   .close-panel {
     position: absolute;
-    top: 10px; right: 12px;
+    top: 8px; right: 10px;
     background: none; border: none;
-    color: rgba(255,255,255,0.3);
-    font-size: 14px; cursor: pointer;
-    line-height: 1;
+    color: rgba(255,255,255,0.25);
+    font-size: 13px; cursor: pointer;
   }
-  .close-panel:hover { color: rgba(255,255,255,0.7); }
+  .close-panel:hover { color: rgba(255,255,255,0.6); }
 
-  /* ── 우클릭 메뉴 ── */
+  /* 우클릭 메뉴 */
   #ctx-menu {
     display: none;
     position: fixed;
-    background: rgba(25, 25, 25, 0.96);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 10px;
-    padding: 6px 0;
+    background: rgba(22, 22, 22, 0.97);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 9px;
+    padding: 5px 0;
     z-index: 9999;
-    min-width: 140px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    min-width: 130px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.7);
     -webkit-app-region: no-drag;
   }
   .menu-item {
-    padding: 8px 16px;
+    padding: 7px 14px;
     font-size: 12px;
-    color: rgba(255,255,255,0.75);
+    color: rgba(255,255,255,0.7);
     cursor: pointer;
     font-family: '맑은 고딕', 'Segoe UI', sans-serif;
-    display: flex; align-items: center; gap: 8px;
   }
-  .menu-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
-  .menu-sep { height: 1px; background: rgba(255,255,255,0.08); margin: 4px 0; }
-  .menu-item.danger { color: rgba(255,80,80,0.8); }
-  .menu-item.danger:hover { color: #ff5050; background: rgba(255,50,50,0.08); }
+  .menu-item:hover { background: rgba(255,255,255,0.07); color: #fff; }
+  .menu-sep { height: 1px; background: rgba(255,255,255,0.07); margin: 3px 0; }
+  .menu-item.danger { color: rgba(255,80,80,0.75); }
+  .menu-item.danger:hover { color: #ff5050; }
 
-  /* ── 입력 공통 ── */
+  /* 공통 입력 */
   input[type="time"], input[type="text"], input[type="number"] {
-    background: rgba(255,255,255,0.07);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 6px;
-    color: #fff;
-    padding: 5px 8px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 5px;
+    color: #ddd;
+    padding: 4px 7px;
     font-size: 12px;
     outline: none;
     font-family: '맑은 고딕', sans-serif;
   }
-  input:focus { border-color: rgba(200,200,200,0.4); }
-  .row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-
+  input:focus { border-color: rgba(200,200,200,0.35); }
+  .row { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; }
   .btn-sm {
-    padding: 5px 12px;
-    border: none; border-radius: 6px;
-    font-size: 11px; cursor: pointer;
-    font-family: '맑은 고딕', sans-serif;
+    padding: 4px 10px; border: none; border-radius: 5px;
+    font-size: 11px; cursor: pointer; font-family: '맑은 고딕', sans-serif;
   }
-  .btn-white { background: rgba(255,255,255,0.12); color: #ddd; }
-  .btn-white:hover { background: rgba(255,255,255,0.2); }
-  .btn-ghost { background: rgba(255,255,255,0.06); color: #999; }
-  .btn-ghost:hover { background: rgba(255,255,255,0.12); }
+  .btn-white { background: rgba(255,255,255,0.11); color: #ccc; }
+  .btn-white:hover { background: rgba(255,255,255,0.18); }
+  .btn-ghost { background: rgba(255,255,255,0.05); color: #888; }
+  .btn-ghost:hover { background: rgba(255,255,255,0.1); }
 
-  /* 알람 목록 */
-  #alarm-list { max-height: 80px; overflow-y: auto; }
+  #alarm-list { max-height: 70px; overflow-y: auto; }
   .alarm-item {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 4px 0; font-size: 11px; color: #bbb;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding: 3px 0; font-size: 11px; color: #aaa;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
     font-family: '맑은 고딕', sans-serif;
   }
-  .alarm-del { color: rgba(255,100,100,0.6); cursor: pointer; }
+  .alarm-del { color: rgba(255,80,80,0.5); cursor: pointer; }
   .alarm-del:hover { color: #ff5050; }
 
-  /* 카운트다운 */
   #cd-display {
-    font-size: 26px; color: #ddd; text-align: center;
-    margin: 8px 0; letter-spacing: 3px;
+    font-size: 22px; color: #ccc; text-align: center;
+    margin: 8px 0; letter-spacing: 2px;
     font-family: 'Consolas', monospace; font-weight: 300;
   }
-  .cd-btns { display: flex; gap: 6px; justify-content: center; }
+  .cd-btns { display: flex; gap: 5px; justify-content: center; }
 
-  /* 설정 */
   .setting-row {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
-    font-size: 12px; color: #ccc; font-family: '맑은 고딕', sans-serif;
+    padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 12px; color: #bbb; font-family: '맑은 고딕', sans-serif;
   }
   .toggle {
-    width: 32px; height: 18px; background: #333; border-radius: 9px;
+    width: 30px; height: 16px; background: #333; border-radius: 8px;
     position: relative; cursor: pointer; transition: background 0.2s;
   }
-  .toggle.on { background: #888; }
+  .toggle.on { background: #777; }
   .toggle::after {
     content: ''; position: absolute;
-    width: 14px; height: 14px; background: #fff; border-radius: 50%;
+    width: 12px; height: 12px; background: #fff; border-radius: 50%;
     top: 2px; left: 2px; transition: left 0.2s;
   }
   .toggle.on::after { left: 16px; }
 
   ::-webkit-scrollbar { width: 3px; }
-  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
 </style>
 </head>
 <body>
 
-<!-- 시계 -->
 <div id="clock-area">
   <div id="clock-wrap">
     <div class="digit-group" id="dg-hh"></div>
     <div class="colon"><div class="dot"></div><div class="dot"></div></div>
     <div class="digit-group" id="dg-mm"></div>
-    <div class="colon"><div class="dot"></div><div class="dot"></div></div>
+    <div class="colon" id="ss-colon"><div class="dot"></div><div class="dot"></div></div>
     <div class="digit-group" id="dg-ss"></div>
   </div>
 </div>
 
-<!-- 패널 영역 -->
 <div id="panel-area">
   <!-- 알람 -->
-  <div class="panel" id="panel-alarm">
+  <div class="panel" id="panel-alarm" style="display:none">
     <div class="panel-title">알람</div>
     <button class="close-panel" onclick="closePanel()">✕</button>
     <div class="row">
@@ -235,15 +216,15 @@
   </div>
 
   <!-- 카운트다운 -->
-  <div class="panel" id="panel-countdown">
+  <div class="panel" id="panel-countdown" style="display:none">
     <div class="panel-title">카운트다운</div>
     <button class="close-panel" onclick="closePanel()">✕</button>
     <div class="row" style="justify-content:center;gap:4px">
-      <input type="number" id="cd-h" placeholder="시" min="0" max="99" style="width:44px;text-align:center">
-      <span style="color:#555">:</span>
-      <input type="number" id="cd-m" placeholder="분" min="0" max="59" style="width:44px;text-align:center">
-      <span style="color:#555">:</span>
-      <input type="number" id="cd-s" placeholder="초" min="0" max="59" style="width:44px;text-align:center">
+      <input type="number" id="cd-h" placeholder="시" min="0" max="99" style="width:42px;text-align:center">
+      <span style="color:#444">:</span>
+      <input type="number" id="cd-m" placeholder="분" min="0" max="59" style="width:42px;text-align:center">
+      <span style="color:#444">:</span>
+      <input type="number" id="cd-s" placeholder="초" min="0" max="59" style="width:42px;text-align:center">
     </div>
     <div id="cd-display">00:00:00</div>
     <div class="cd-btns">
@@ -254,7 +235,7 @@
   </div>
 
   <!-- 설정 -->
-  <div class="panel" id="panel-settings">
+  <div class="panel" id="panel-settings" style="display:none">
     <div class="panel-title">설정</div>
     <button class="close-panel" onclick="closePanel()">✕</button>
     <div class="setting-row">
@@ -267,8 +248,8 @@
     </div>
     <div class="setting-row">
       <span>숫자 밝기</span>
-      <input type="range" min="40" max="255" value="200" id="brightness-slider"
-        style="width:90px;accent-color:#aaa"
+      <input type="range" min="60" max="255" value="184" id="brightness-slider"
+        style="width:80px;accent-color:#888"
         oninput="setBrightness(this.value)">
     </div>
   </div>
@@ -287,23 +268,26 @@
 <script>
 const invoke = (...a) => window.__TAURI__?.core?.invoke(...a) ?? Promise.resolve();
 
+function setWinHeight(h) {
+  invoke('set_window_height', { height: h });
+}
+
 // ── 7세그먼트 ──────────────────────────────────────────────
 const SEGS = {
   0:'abcdef',1:'bc',2:'abdeg',3:'abcdg',
   4:'bcfg',5:'acdfg',6:'acdefg',7:'abc',
   8:'abcdefg',9:'abcdfg'
 };
-const SEG_CLASSES = {
+const SEG_CLS = {
   a:'seg seg-h seg-a',b:'seg seg-v seg-b',c:'seg seg-v seg-c',
   d:'seg seg-h seg-d',e:'seg seg-v seg-e',f:'seg seg-v seg-f',g:'seg seg-h seg-g'
 };
-
 function makeDigit() {
   const el = document.createElement('div');
   el.className = 'seg-digit';
   'abcdefg'.split('').forEach(s => {
     const seg = document.createElement('div');
-    seg.className = SEG_CLASSES[s] + ' off';
+    seg.className = SEG_CLS[s]+' off';
     seg.dataset.seg = s;
     el.appendChild(seg);
   });
@@ -323,7 +307,6 @@ function setNum(pair, num) {
   const s = String(num).padStart(2,'0');
   setDigit(pair[0],+s[0]); setDigit(pair[1],+s[1]);
 }
-
 const dgH = makePair('dg-hh');
 const dgM = makePair('dg-mm');
 const dgS = makePair('dg-ss');
@@ -340,16 +323,21 @@ function updateClock() {
 setInterval(updateClock, 1000);
 updateClock();
 
-// ── 패널 ──────────────────────────────────────────────────
+// ── 패널 (창 높이 동적 조절) ──────────────────────────────
+const PANEL_HEIGHTS = { alarm: 230, countdown: 220, settings: 210 };
+const CLOCK_H = 90;
+
 function openPanel(name) {
   closeCtxMenu();
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('panel-' + name).classList.add('active');
+  document.querySelectorAll('#panel-area .panel').forEach(p => p.style.display = 'none');
+  document.getElementById('panel-' + name).style.display = 'block';
   document.getElementById('panel-area').style.display = 'block';
+  setWinHeight(CLOCK_H + (PANEL_HEIGHTS[name] || 200));
 }
 function closePanel() {
   document.getElementById('panel-area').style.display = 'none';
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#panel-area .panel').forEach(p => p.style.display = 'none');
+  setWinHeight(CLOCK_H);
 }
 
 // ── 우클릭 메뉴 ──────────────────────────────────────────
@@ -358,8 +346,8 @@ document.addEventListener('contextmenu', e => {
   e.preventDefault();
   ctxMenu.style.display = 'block';
   let x = e.clientX, y = e.clientY;
-  if (x + 160 > window.innerWidth) x = window.innerWidth - 160;
-  if (y + 200 > window.innerHeight) y = window.innerHeight - 200;
+  if (x + 140 > window.innerWidth) x = window.innerWidth - 140;
+  if (y + 180 > window.innerHeight) y = Math.max(0, e.clientY - 180);
   ctxMenu.style.left = x + 'px';
   ctxMenu.style.top = y + 'px';
 });
@@ -378,10 +366,8 @@ function toggleSec() {
   const t = document.getElementById('tog-sec');
   t.classList.toggle('on');
   showSec = t.classList.contains('on');
-  const ssEl = document.getElementById('dg-ss');
-  const colons = document.querySelectorAll('.colon');
-  ssEl.style.display = showSec ? '' : 'none';
-  colons[colons.length-1].style.display = showSec ? '' : 'none';
+  document.getElementById('dg-ss').style.display = showSec ? '' : 'none';
+  document.getElementById('ss-colon').style.display = showSec ? '' : 'none';
 }
 function setBrightness(v) {
   const c = Math.round(v);

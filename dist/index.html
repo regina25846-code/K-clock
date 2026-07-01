@@ -128,6 +128,7 @@ select { background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.
   <div class="panel" id="panel-settings">
     <div class="panel-title">설정</div>
     <button class="close-panel" onclick="closePanel()">✕</button>
+    <div class="setting-row"><span>시작 시 실행</span><div class="toggle off" id="tog-auto" onclick="toggleAutostart()"></div></div>
     <div class="setting-row"><span>항상 위</span><div class="toggle" id="tog-pin" onclick="toggleAlwaysOnTop()"></div></div>
     <div class="setting-row"><span>초 표시</span><div class="toggle" id="tog-sec" onclick="toggleSec()"></div></div>
     <div class="setting-row">
@@ -216,6 +217,12 @@ changeStyle("'KoPubWorld Dotum Bold',sans-serif");
 changeSize(70);
 changeBrightness(220);
 
+// 자동 시작 상태 로드
+invoke('get_autostart').then(on=>{
+  const tog=document.getElementById('tog-auto');
+  if(on) tog.classList.remove('off'); else tog.classList.add('off');
+});
+
 function adjustHeight(){
   const h=document.getElementById('clock-area').offsetHeight;
   invoke('set_window_height',{height:h});
@@ -228,6 +235,13 @@ function toggleSec(){
   document.getElementById('ds').style.display=showSec?'flex':'none';
   document.getElementById('colon2').style.display=showSec?'flex':'none';
   upd();
+}
+
+async function toggleAutostart(){
+  const tog=document.getElementById('tog-auto');
+  tog.classList.toggle('off');
+  const on=!tog.classList.contains('off');
+  await invoke('set_autostart',{enabled:on});
 }
 
 function toggleAlwaysOnTop(){

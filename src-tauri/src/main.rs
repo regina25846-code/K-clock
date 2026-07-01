@@ -5,6 +5,7 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Manager,
 };
+use tauri_plugin_autostart::ManagerExt;
 
 #[tauri::command]
 fn set_always_on_top(window: tauri::Window, on_top: bool) {
@@ -31,8 +32,20 @@ fn set_window_height(window: tauri::Window, height: u32) {
     let _ = window.set_size(tauri::Size::Logical(tauri::LogicalSize { width: 300.0, height: height as f64 }));
 }
 
+#[tauri::command]
+fn set_autostart(app: tauri::AppHandle, enabled: bool) {
+    let mgr = app.autolaunch();
+    if enabled { let _ = mgr.enable(); } else { let _ = mgr.disable(); }
+}
+
+#[tauri::command]
+fn get_autostart(app: tauri::AppHandle) -> bool {
+    app.autolaunch().is_enabled().unwrap_or(false)
+}
+
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .setup(|app| {
             let quit = MenuItem::with_id(app, "quit", "종료", true, None::<&str>)?;
             let show = MenuItem::with_id(app, "show", "K-Clock 보이기", true, None::<&str>)?;
@@ -85,6 +98,8 @@ fn main() {
             close_app,
             set_window_height,
             start_dragging,
+            set_autostart,
+            get_autostart,
         ])
         .run(tauri::generate_context!())
         .expect("K-Clock 실행 실패");

@@ -225,7 +225,7 @@ function upd(){
   const sc=String(n.getSeconds()).padStart(2,'0');
   txtClock.textContent=showSec?`${h}:${mi}:${sc}`:`${h}:${mi}`;
   const hm=`${h}:${mi}`;
-  alarms.forEach(a=>{if(a.enabled&&a.t===hm&&n.getSeconds()===0){triggerAlarm();if(!a.repeat){a.enabled=false;renderAlarms();}}});
+  alarms.forEach(a=>{if(a.enabled&&a.t===hm&&n.getSeconds()===0){triggerAlarm();if(!a.repeat){a.enabled=false;saveAlarms();renderAlarms();}}});
 }
 setInterval(upd,1000);upd();
 changeStyle("'KoPubWorld Dotum Bold',sans-serif");
@@ -347,6 +347,7 @@ function stopAlarm(){
   document.getElementById('clock-area').classList.remove('flashing');
   alarmAudio.pause(); alarmAudio.currentTime=0;
 }
+function saveAlarms(){ localStorage.setItem('alarms',JSON.stringify(alarms)); }
 function addAlarm(){
   const t=document.getElementById('alarm-time').value;
   const name=document.getElementById('alarm-name').value.trim()||'알람';
@@ -355,10 +356,11 @@ function addAlarm(){
   document.getElementById('alarm-name').value='';
   repeatMode=false;
   document.getElementById('btn-repeat').classList.remove('active');
+  saveAlarms();
   renderAlarms();
 }
-function toggleAlarm(id){ const a=alarms.find(x=>x.id===id); if(a) a.enabled=!a.enabled; renderAlarms(); }
-function removeAlarm(id){ alarms.splice(alarms.findIndex(a=>a.id===id),1); renderAlarms(); }
+function toggleAlarm(id){ const a=alarms.find(x=>x.id===id); if(a) a.enabled=!a.enabled; saveAlarms(); renderAlarms(); }
+function removeAlarm(id){ alarms.splice(alarms.findIndex(a=>a.id===id),1); saveAlarms(); renderAlarms(); }
 function renderAlarms(){
   const list=document.getElementById('alarm-list');
   const empty=document.getElementById('alarm-empty');
@@ -462,6 +464,14 @@ function changePanelColor(c){
   const sl=document.getElementById('size-slider');
   sl.max=100;
   if(parseInt(sl.value)>100){ sl.value=100; document.getElementById('size-val').textContent=100; }
+})();
+
+// 알람 복원
+(function(){
+  try{
+    const saved=localStorage.getItem('alarms');
+    if(saved){ const arr=JSON.parse(saved); arr.forEach(a=>alarms.push(a)); renderAlarms(); }
+  }catch(e){}
 })();
 
 // 설정 복원

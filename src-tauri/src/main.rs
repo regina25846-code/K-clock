@@ -33,6 +33,11 @@ fn set_window_height(window: tauri::Window, height: u32) {
 }
 
 #[tauri::command]
+fn set_window_size(window: tauri::Window, width: u32, height: u32) {
+    let _ = window.set_size(tauri::Size::Logical(tauri::LogicalSize { width: width as f64, height: height as f64 }));
+}
+
+#[tauri::command]
 fn set_autostart(app: tauri::AppHandle, enabled: bool) {
     let mgr = app.autolaunch();
     if enabled { let _ = mgr.enable(); } else { let _ = mgr.disable(); }
@@ -97,6 +102,7 @@ fn main() {
             minimize_window,
             close_app,
             set_window_height,
+            set_window_size,
             start_dragging,
             set_autostart,
             get_autostart,

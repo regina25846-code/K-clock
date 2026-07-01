@@ -37,9 +37,12 @@ body { background:transparent; font-family:'Segoe UI',sans-serif; overflow:hidde
 
 /* 알람 */
 .alarm-row { display:flex; align-items:center; gap:6px; margin-bottom:8px; }
-.alarm-row input[type=time] { width:120px; flex-shrink:0; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:5px; color:#b8b8b8; padding:4px 6px; font-size:12px; outline:none; }
-.alarm-row input[type=text] { flex:1; min-width:0; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:5px; color:#b8b8b8; padding:4px 6px; font-size:12px; outline:none; }
+.alarm-row input[type=time] { width:100px; flex-shrink:0; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:5px; color:#b8b8b8; padding:4px 6px; font-size:12px; outline:none; font-family:inherit; }
+.alarm-row input[type=text] { flex:1; min-width:0; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:5px; color:#b8b8b8; padding:4px 6px; font-size:12px; outline:none; font-family:inherit; }
 .btn-add { flex-shrink:0; width:36px; padding:5px 0; background:rgba(255,255,255,0.10); color:#b8b8b8; border:1px solid rgba(255,255,255,0.15); border-radius:5px; font-size:11px; cursor:pointer; text-align:center; }
+.btn-repeat { flex-shrink:0; width:26px; height:26px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); border-radius:5px; cursor:pointer; color:rgba(255,255,255,0.3); display:flex; align-items:center; justify-content:center; padding:0; }
+.btn-repeat.active { color:#4a9; border-color:#4a9; }
+.alarm-repeat-icon { color:#4a9; display:inline-flex; align-items:center; margin-left:3px; vertical-align:middle; }
 .alarm-list { display:flex; flex-direction:column; gap:4px; }
 .alarm-item { display:flex; align-items:center; justify-content:space-between; padding:5px 2px; font-size:12px; color:#b8b8b8; border-bottom:1px solid rgba(255,255,255,0.08); gap:6px; }
 .alarm-item .alarm-label { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -102,6 +105,7 @@ select option { background:#1e1e1e; color:#b8b8b8; }
     <div class="alarm-row">
       <input type="time" id="alarm-time" value="07:00">
       <input type="text" id="alarm-name" placeholder="이름">
+      <button class="btn-repeat" id="btn-repeat" onclick="toggleRepeatBtn()" title="매일 반복"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
       <button class="btn-add" onclick="addAlarm()">추가</button>
     </div>
     <div class="alarm-list" id="alarm-list"></div>
@@ -203,6 +207,11 @@ alarmAudio.volume=0.6;
 const txtClock=document.getElementById('text-clock');
 const alarms=[];
 let flashTimer=null;
+let repeatMode=false;
+function toggleRepeatBtn(){
+  repeatMode=!repeatMode;
+  document.getElementById('btn-repeat').classList.toggle('active',repeatMode);
+}
 
 function upd(){
   const n=new Date();
@@ -213,7 +222,7 @@ function upd(){
   const sc=String(n.getSeconds()).padStart(2,'0');
   txtClock.textContent=showSec?`${h}:${mi}:${sc}`:`${h}:${mi}`;
   const hm=`${h}:${mi}`;
-  alarms.forEach(a=>{if(a.enabled&&a.t===hm&&n.getSeconds()===0)triggerAlarm();});
+  alarms.forEach(a=>{if(a.enabled&&a.t===hm&&n.getSeconds()===0){triggerAlarm();if(!a.repeat){a.enabled=false;renderAlarms();}}});
 }
 setInterval(upd,1000);upd();
 changeStyle("'KoPubWorld Dotum Bold',sans-serif");
@@ -277,6 +286,9 @@ function changeSize(v){
   const sw=document.getElementById('seg-wrap');
   sw.style.transform=`scale(${scale})`;
   sw.style.transformOrigin='center';
+  const w=Math.max(300, Math.round(v*5.8)+20);
+  const h=document.getElementById('clock-area').offsetHeight;
+  invoke('set_window_size',{width:w,height:h});
 }
 
 function changeBrightness(v){
@@ -309,8 +321,10 @@ function addAlarm(){
   const t=document.getElementById('alarm-time').value;
   const name=document.getElementById('alarm-name').value.trim()||'알람';
   if(!t) return;
-  alarms.push({id:Date.now(),t,name,enabled:true});
+  alarms.push({id:Date.now(),t,name,enabled:true,repeat:repeatMode});
   document.getElementById('alarm-name').value='';
+  repeatMode=false;
+  document.getElementById('btn-repeat').classList.remove('active');
   renderAlarms();
 }
 function toggleAlarm(id){ const a=alarms.find(x=>x.id===id); if(a) a.enabled=!a.enabled; renderAlarms(); }
@@ -327,7 +341,8 @@ function renderAlarms(){
     const div=document.createElement('div');
     div.className='alarm-item';
     div.style.color=c;
-    div.innerHTML=`<span class="alarm-label">${a.t} ${a.name}</span><div class="alarm-toggle ${a.enabled?'on':''}" onclick="toggleAlarm(${a.id})"></div><button class="alarm-del" onclick="removeAlarm(${a.id})">✕</button>`;
+    const repeatIcon=a.repeat?`<span class="alarm-repeat-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span>`:'';
+    div.innerHTML=`<span class="alarm-label">${a.t} ${a.name}${repeatIcon}</span><div class="alarm-toggle ${a.enabled?'on':''}" onclick="toggleAlarm(${a.id})"></div><button class="alarm-del" onclick="removeAlarm(${a.id})">✕</button>`;
     list.appendChild(div);
   });
 }

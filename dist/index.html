@@ -197,6 +197,8 @@ function sn(p,n){const s=String(n).padStart(2,'0');sd(p[0],+s[0]);sd(p[1],+s[1])
 const ph=mp('dh'),pm=mp('dm'),ps=mp('ds');
 
 let showSec=true, brightness=220, panelColor='black', panelOpacity=0.5;
+const alarmAudio=new Audio('sounds/alarm.wav');
+alarmAudio.volume=0.6;
 const txtClock=document.getElementById('text-clock');
 const alarms=[];
 let flashTimer=null;
@@ -291,7 +293,16 @@ function triggerAlarm(){
   if(flashTimer) return;
   const cr=document.getElementById('clock-area');
   cr.classList.add('flashing');
-  flashTimer=setTimeout(()=>{ cr.classList.remove('flashing'); flashTimer=null; },10000);
+  alarmAudio.currentTime=0;
+  alarmAudio.loop=true;
+  alarmAudio.play().catch(()=>{});
+  flashTimer=setTimeout(stopAlarm, 30000);
+}
+function stopAlarm(){
+  if(!flashTimer) return;
+  clearTimeout(flashTimer); flashTimer=null;
+  document.getElementById('clock-area').classList.remove('flashing');
+  alarmAudio.pause(); alarmAudio.currentTime=0;
 }
 function addAlarm(){
   const t=document.getElementById('alarm-time').value;
@@ -341,6 +352,9 @@ function renderCd(){
 }
 
 // ── 드래그 (Tauri) ──
+document.getElementById('clock-row').addEventListener('click',function(){
+  if(flashTimer) stopAlarm();
+});
 document.getElementById('clock-area').addEventListener('mousedown',function(e){
   if(e.button!==0) return;
   if(e.target.closest('button,input,select,.toggle,.alarm-toggle,.panel,#ctx-menu')) return;

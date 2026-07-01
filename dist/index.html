@@ -297,7 +297,7 @@ function showInfo(){
   const el=document.createElement('div');
   el.id='info-dialog';
   el.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(20,20,20,0.97);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:20px 24px;z-index:2000;min-width:200px;text-align:center;color:rgba(255,255,255,0.85);font-size:14px;';
-  el.innerHTML='<div style="font-size:18px;font-weight:700;margin-bottom:8px;">K-Clock</div><div style="color:rgba(255,255,255,0.5);font-size:12px;margin-bottom:4px;">v1.0.4</div><div style="color:rgba(255,255,255,0.4);font-size:12px;">© 2026 KrisB</div><div style="margin-top:14px;"><button onclick="document.getElementById(\'info-dialog\').remove()" style="background:rgba(255,255,255,0.1);border:none;border-radius:6px;color:rgba(255,255,255,0.7);padding:5px 16px;font-size:13px;cursor:pointer;">닫기</button></div>';
+  el.innerHTML='<div style="font-size:18px;font-weight:700;margin-bottom:8px;">K-Clock</div><div style="color:rgba(255,255,255,0.5);font-size:12px;margin-bottom:4px;">v1.0.5</div><div style="color:rgba(255,255,255,0.4);font-size:12px;">© 2026 KrisB</div><div style="margin-top:14px;"><button onclick="document.getElementById(\'info-dialog\').remove()" style="background:rgba(255,255,255,0.1);border:none;border-radius:6px;color:rgba(255,255,255,0.7);padding:5px 16px;font-size:13px;cursor:pointer;">닫기</button></div>';
   document.getElementById('clock-area').appendChild(el);
   setTimeout(()=>{ document.addEventListener('mousedown',function h(e){ if(!e.target.closest('#info-dialog')){ el.remove(); document.removeEventListener('mousedown',h); } }); },10);
 }

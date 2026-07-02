@@ -23,6 +23,11 @@ fn close_app(app: tauri::AppHandle) {
 }
 
 #[tauri::command]
+fn hide_window(window: tauri::Window) {
+    let _ = window.hide();
+}
+
+#[tauri::command]
 fn start_dragging(window: tauri::Window) {
     let _ = window.start_dragging();
 }
@@ -137,6 +142,7 @@ fn main() {
             set_always_on_top,
             minimize_window,
             close_app,
+            hide_window,
             set_window_height,
             set_window_size,
             get_window_pos,

@@ -396,7 +396,7 @@ document.getElementById('btn-pin').addEventListener('click', () => {
   invoke('set_always_on_top', { onTop: pinned });
 });
 document.getElementById('btn-min').addEventListener('click', () => invoke('minimize_window'));
-document.getElementById('btn-close').addEventListener('click', () => invoke('close_app'));
+document.getElementById('btn-close').addEventListener('click', () => invoke('hide_window'));
 
 // ── 알람 ──────────────────────────────────────────────────
 let alarms = JSON.parse(localStorage.getItem('k_alarms') || '[]');
@@ -503,6 +503,38 @@ window.toggleSec = function() {
 window.setOpacity = function(v) {
   document.getElementById('app').style.background = `rgba(10,10,10,${v/100})`;
 };
+
+// ── 업데이트 팝업 ──────────────────────────────────────────
+const APP_VERSION = '1.0.6';
+const CHANGELOG = {
+  '1.0.6': [
+    '작업표시줄에서 창 닫기(✕) 버튼을 눌러도 앱이 종료되지 않고 시스템 트레이로 숨겨집니다.',
+    '시스템 트레이 아이콘을 클릭하면 다시 표시됩니다.',
+  ]
+};
+
+function showUpdatePopup(version) {
+  const notes = CHANGELOG[version];
+  if (!notes) return;
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;border-radius:12px';
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#1a1a1a;border:1px solid rgba(224,51,51,0.4);border-radius:10px;padding:18px 20px;width:260px;color:#eee;font-size:13px';
+  box.innerHTML = `
+    <div style="font-size:15px;font-weight:bold;color:#e03333;margin-bottom:10px">v${version} 업데이트</div>
+    <ul style="padding-left:16px;line-height:1.7;color:#ccc">${notes.map(n=>`<li>${n}</li>`).join('')}</ul>
+    <button onclick="this.closest('[data-overlay]').remove();localStorage.setItem('k_seen_version','${version}')"
+      style="margin-top:14px;width:100%;padding:6px;background:#e03333;border:none;border-radius:6px;color:#fff;font-size:13px;cursor:pointer">확인</button>
+  `;
+  overlay.setAttribute('data-overlay','');
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+
+(function checkVersion() {
+  const seen = localStorage.getItem('k_seen_version');
+  if (seen !== APP_VERSION) showUpdatePopup(APP_VERSION);
+})();
 </script>
 </body>
 </html>

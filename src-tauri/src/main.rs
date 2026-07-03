@@ -6,6 +6,7 @@ use tauri::{
     Manager,
 };
 use tauri_plugin_autostart::ManagerExt;
+use tauri_plugin_updater::UpdaterExt;
 
 #[tauri::command]
 fn set_always_on_top(window: tauri::Window, on_top: bool) {
@@ -74,8 +75,16 @@ fn get_autostart(app: tauri::AppHandle) -> bool {
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .setup(|app| {
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                if let Ok(Some(update)) = handle.updater().check().await {
+                    let _ = handle.emit("update-available", update.version);
+                }
+            });
+
             let show = MenuItem::with_id(app, "show", "K-Clock 보이기", true, None::<&str>)?;
             let sep1 = PredefinedMenuItem::separator(app)?;
             let settings = MenuItem::with_id(app, "settings", "설정", true, None::<&str>)?;

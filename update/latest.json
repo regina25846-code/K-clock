@@ -1,11 +1,11 @@
 {
-  "version": "1.1.0",
-  "notes": "K-Clock v1.1.0",
-  "pub_date": "2026-07-03T16:34:39Z",
+  "version": "1.2.0",
+  "notes": "K-Clock v1.2.0",
+  "pub_date": "2026-07-03T19:09:33Z",
   "platforms": {
     "windows-x86_64": {
       "signature": "",
-      "url": "https://github.com/regina25846-code/K-clock/releases/download/v1.1.0/K-Clock_1.1.0_x64-setup.nsis.zip"
+      "url": "https://github.com/regina25846-code/K-clock/releases/download/v1.2.0/K-Clock_1.2.0_x64-setup.nsis.zip"
     }
   }
 }

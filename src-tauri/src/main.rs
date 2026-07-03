@@ -3,7 +3,7 @@
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager,
+    Emitter, Manager,
 };
 use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_updater::UpdaterExt;
@@ -80,8 +80,10 @@ fn main() {
         .setup(|app| {
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                if let Ok(Some(update)) = handle.updater().check().await {
-                    let _ = handle.emit("update-available", update.version);
+                if let Ok(updater) = handle.updater() {
+                    if let Ok(Some(update)) = updater.check().await {
+                        let _ = handle.emit("update-available", update.version);
+                    }
                 }
             });
 

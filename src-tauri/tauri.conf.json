@@ -22,7 +22,8 @@
         "maximizable": false,
         "minimizable": false,
         "center": true,
-        "shadow": false
+        "shadow": false,
+        "skipTaskbar": true
       }
     ],
     "withGlobalTauri": true,

@@ -292,6 +292,10 @@
   <!-- 설정 패널 -->
   <div class="tab-panel" id="panel-settings">
     <div class="setting-row">
+      <span>시작 시 실행</span>
+      <div class="toggle" id="toggle-autostart" onclick="toggleAutostart()"></div>
+    </div>
+    <div class="setting-row">
       <span>항상 위</span>
       <div class="toggle on" id="toggle-pin" onclick="togglePin()"></div>
     </div>
@@ -491,6 +495,16 @@ window.resetCountdown = function() {
 };
 
 // ── 설정 ──────────────────────────────────────────────────
+invoke('get_autostart').then(enabled => {
+  document.getElementById('toggle-autostart').classList.toggle('on', enabled);
+});
+
+window.toggleAutostart = function() {
+  const t = document.getElementById('toggle-autostart');
+  t.classList.toggle('on');
+  invoke('set_autostart', { enabled: t.classList.contains('on') });
+};
+
 window.togglePin = function() {
   const t = document.getElementById('toggle-pin');
   t.classList.toggle('on');

@@ -232,16 +232,10 @@ changeStyle("'KoPubWorld Dotum Bold',sans-serif");
 changeSize(70);
 changeBrightness(220);
 
-// 자동 시작 상태 로드 (첫 실행 시 기본값 켜짐)
+// 자동 시작 상태 — 항상 실제 OS 등록 상태 반영
 invoke('get_autostart').then(on=>{
   const tog=document.getElementById('tog-auto');
-  if(!localStorage.getItem('autostart_init')){
-    localStorage.setItem('autostart_init','1');
-    invoke('set_autostart',{enabled:true});
-    tog.classList.remove('off');
-  } else {
-    if(on) tog.classList.remove('off'); else tog.classList.add('off');
-  }
+  if(on) tog.classList.remove('off'); else tog.classList.add('off');
 });
 
 function adjustHeight(){
@@ -297,7 +291,7 @@ function showInfo(){
   const el=document.createElement('div');
   el.id='info-dialog';
   el.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(20,20,20,0.97);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:20px 24px;z-index:2000;min-width:200px;text-align:center;color:rgba(255,255,255,0.85);font-size:14px;';
-  el.innerHTML='<div style="font-size:18px;font-weight:700;margin-bottom:8px;">K-Clock</div><div style="color:rgba(255,255,255,0.5);font-size:12px;margin-bottom:4px;">v1.0.5</div><div style="color:rgba(255,255,255,0.4);font-size:12px;">© 2026 KrisB</div><div style="margin-top:14px;"><button onclick="document.getElementById(\'info-dialog\').remove()" style="background:rgba(255,255,255,0.1);border:none;border-radius:6px;color:rgba(255,255,255,0.7);padding:5px 16px;font-size:13px;cursor:pointer;">닫기</button></div>';
+  el.innerHTML='<div style="font-size:16px;font-weight:800;color:#f0f0f0;margin-bottom:4px;">K-Clock</div><div style="font-size:12px;color:#888;margin-bottom:12px;">v1.0.9</div><div style="height:1px;background:#2d2d2d;margin-bottom:12px;"></div><div style="font-size:13px;color:#ccc;line-height:1.8;margin-bottom:12px;">시스템 트레이 상주형 시계<br>알람 · 카운트다운 · 스타일 설정</div><div style="font-size:11px;color:#888;margin-bottom:14px;">© 2026 KrisB. All rights reserved.</div><button onclick="document.getElementById(\'info-dialog\').remove()" style="background:#3a3a3a;border:none;border-radius:6px;color:#aaa;padding:5px 16px;font-size:13px;cursor:pointer;">닫기</button>';
   document.getElementById('clock-area').appendChild(el);
   setTimeout(()=>{ document.addEventListener('mousedown',function h(e){ if(!e.target.closest('#info-dialog')){ el.remove(); document.removeEventListener('mousedown',h); } }); },10);
 }

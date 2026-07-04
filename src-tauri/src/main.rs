@@ -99,7 +99,8 @@ fn open_about(app: tauri::AppHandle) {
     .always_on_top(true)
     .skip_taskbar(true)
     .center()
-    .build();
+    .build()
+    .map(|win| { let _ = win.center(); });
 }
 
 fn main() {

@@ -73,6 +73,28 @@ fn get_autostart(app: tauri::AppHandle) -> bool {
     app.autolaunch().is_enabled().unwrap_or(false)
 }
 
+#[tauri::command]
+fn open_about(app: tauri::AppHandle) {
+    if let Some(win) = app.get_webview_window("about") {
+        let _ = win.set_focus();
+        return;
+    }
+    let _ = tauri::WebviewWindowBuilder::new(
+        &app,
+        "about",
+        tauri::WebviewUrl::App("about.html".into()),
+    )
+    .title("프로그램 정보")
+    .inner_size(320.0, 360.0)
+    .resizable(false)
+    .decorations(false)
+    .transparent(true)
+    .always_on_top(true)
+    .skip_taskbar(true)
+    .center()
+    .build();
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_window_state::Builder::default()
@@ -117,11 +139,7 @@ fn main() {
                         }
                     }
                     "info" => {
-                        if let Some(win) = app.get_webview_window("main") {
-                            let _ = win.show();
-                            let _ = win.set_focus();
-                            let _ = win.eval("showInfo()");
-                        }
+                        open_about(app.clone());
                     }
                     _ => {}
                 })
@@ -164,6 +182,7 @@ fn main() {
             start_dragging,
             set_autostart,
             get_autostart,
+            open_about,
         ])
         .run(tauri::generate_context!())
         .expect("K-Clock 실행 실패");

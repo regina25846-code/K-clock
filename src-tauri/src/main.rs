@@ -89,7 +89,7 @@ fn open_about(app: tauri::AppHandle) {
     let _ = tauri::WebviewWindowBuilder::new(
         &app,
         "about",
-        tauri::WebviewUrl::App("about.html".into()),
+        tauri::WebviewUrl::App(format!("about.html?v={}", env!("CARGO_PKG_VERSION")).into()),
     )
     .title("프로그램 정보")
     .inner_size(320.0, 360.0)

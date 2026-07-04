@@ -74,6 +74,13 @@ fn get_autostart(app: tauri::AppHandle) -> bool {
 }
 
 #[tauri::command]
+fn close_about(app: tauri::AppHandle) {
+    if let Some(win) = app.get_webview_window("about") {
+        let _ = win.destroy();
+    }
+}
+
+#[tauri::command]
 fn open_about(app: tauri::AppHandle) {
     if let Some(win) = app.get_webview_window("about") {
         let _ = win.set_focus();
@@ -186,6 +193,7 @@ fn main() {
             set_autostart,
             get_autostart,
             open_about,
+            close_about,
         ])
         .run(tauri::generate_context!())
         .expect("K-Clock 실행 실패");

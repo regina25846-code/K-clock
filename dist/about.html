@@ -67,8 +67,7 @@
   async function closeAbout() {
     if (window.__TAURI__) {
       try {
-        const { getCurrentWebviewWindow } = window.__TAURI__.webviewWindow;
-        await getCurrentWebviewWindow().close();
+        await window.__TAURI__.core.invoke('close_about');
       } catch(e) { window.close(); }
     } else { window.close(); }
   }

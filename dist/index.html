@@ -504,7 +504,8 @@ clockArea.addEventListener('contextmenu',async function(e){
   const my=e.clientY;
   const mx=Math.min(e.clientX, winW-menuW-4);
   const neededW=Math.max(winW, mx+menuW+4);
-  const neededH=my+menuH+4;
+  const curH=document.getElementById('clock-area').offsetHeight;
+const neededH=Math.max(curH, my+menuH+4);
   await invoke('set_window_size',{width:neededW,height:neededH});
   await new Promise(r=>setTimeout(r,60));
   menu.style.left=mx+'px';

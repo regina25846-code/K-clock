@@ -44,8 +44,12 @@ body { background:transparent; font-family:'Segoe UI',sans-serif; overflow:hidde
 .btn-repeat { flex-shrink:0; width:26px; height:26px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); border-radius:5px; cursor:pointer; color:rgba(255,255,255,0.3); display:flex; align-items:center; justify-content:center; padding:0; }
 .btn-repeat.active { color:#4a9; border-color:#4a9; }
 .alarm-repeat-icon { color:#4a9; display:inline-flex; align-items:center; margin-left:3px; vertical-align:middle; }
-.alarm-list { display:flex; flex-direction:column; gap:4px; }
-.alarm-item { display:flex; align-items:center; justify-content:space-between; padding:5px 2px; font-size:12px; color:#b8b8b8; border-bottom:1px solid rgba(255,255,255,0.08); gap:6px; }
+.alarm-list { display:flex; flex-direction:column; gap:4px; max-height:180px; overflow-y:auto; overflow-x:hidden; }
+.alarm-list::-webkit-scrollbar { width:5px; }
+.alarm-list::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.15); border-radius:3px; }
+.alarm-list::-webkit-scrollbar-track { background:transparent; }
+.alarm-item { display:flex; align-items:center; justify-content:space-between; padding:5px 2px; font-size:12px; color:#b8b8b8; border-bottom:1px solid rgba(255,255,255,0.08); gap:6px; cursor:grab; }
+.alarm-item.dragging { position:relative; z-index:5; cursor:grabbing; background:rgba(255,255,255,0.06); border-radius:5px; box-shadow:0 2px 8px rgba(0,0,0,0.4); }
 .alarm-item .alarm-label { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .alarm-toggle { width:26px; height:14px; background:#333; border-radius:7px; position:relative; cursor:pointer; flex-shrink:0; }
 .alarm-toggle::after { content:''; position:absolute; width:10px; height:10px; background:#fff; border-radius:50%; top:2px; left:2px; transition:left 0.15s; }
@@ -369,7 +373,7 @@ function renderAlarms(){
   const list=document.getElementById('alarm-list');
   const empty=document.getElementById('alarm-empty');
   list.innerHTML='';
-  if(!alarms.length){empty.style.display='block';return;}
+  if(!alarms.length){empty.style.display='block';setTimeout(adjustHeight,10);return;}
   empty.style.display='none';
   const hex=brightness.toString(16).padStart(2,'0');
   const c='#'+hex+hex+hex;
@@ -379,8 +383,58 @@ function renderAlarms(){
     div.style.color=c;
     const repeatIcon=a.repeat?`<span class="alarm-repeat-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span>`:'';
     div.innerHTML=`<span class="alarm-label">${a.t} ${a.name}${repeatIcon}</span><div class="alarm-toggle ${a.enabled?'on':''}" onclick="toggleAlarm(${a.id})"></div><button class="alarm-del" onclick="removeAlarm(${a.id})">✕</button>`;
+    div.addEventListener('mousedown', e=>startAlarmDrag(e, div));
     list.appendChild(div);
   });
+  setTimeout(adjustHeight,10);
+}
+
+// ── 알람 드래그 정렬 ──
+let dragCtx=null;
+function startAlarmDrag(e, item){
+  if(e.button!==0 || e.target.closest('.alarm-toggle,.alarm-del')) return;
+  e.preventDefault();
+  const list=document.getElementById('alarm-list');
+  const children=Array.from(list.children);
+  const idx=children.indexOf(item);
+  const itemH=item.offsetHeight+4;
+  dragCtx={item, idx, curIdx:idx, list, children, startY:e.clientY, itemH};
+  item.classList.add('dragging');
+  document.addEventListener('mousemove', onAlarmDragMove);
+  document.addEventListener('mouseup', onAlarmDragEnd);
+}
+function onAlarmDragMove(e){
+  if(!dragCtx) return;
+  const dy=e.clientY-dragCtx.startY;
+  dragCtx.item.style.transform=`translateY(${dy}px)`;
+  const steps=Math.round(dy/dragCtx.itemH);
+  const newIdx=Math.min(dragCtx.children.length-1, Math.max(0, dragCtx.idx+steps));
+  if(newIdx!==dragCtx.curIdx){
+    const dir=newIdx>dragCtx.curIdx?1:-1;
+    for(let i=dragCtx.curIdx; i!==newIdx; i+=dir){
+      const sib=dragCtx.children[i+dir];
+      if(sib===dragCtx.item) continue;
+      sib.style.transition='transform 0.15s ease';
+      sib.style.transform=`translateY(${-dir*dragCtx.itemH}px)`;
+    }
+    dragCtx.curIdx=newIdx;
+  }
+}
+function onAlarmDragEnd(){
+  if(!dragCtx) return;
+  const {item, idx, curIdx, children}=dragCtx;
+  document.removeEventListener('mousemove', onAlarmDragMove);
+  document.removeEventListener('mouseup', onAlarmDragEnd);
+  if(curIdx!==idx){
+    const moved=alarms.splice(idx,1)[0];
+    alarms.splice(curIdx,0,moved);
+    saveAlarms();
+  }
+  item.classList.remove('dragging');
+  item.style.transition=''; item.style.transform='';
+  children.forEach(c=>{ if(c!==item){ c.style.transition=''; c.style.transform=''; } });
+  dragCtx=null;
+  renderAlarms();
 }
 
 // ── 카운트다운 ──

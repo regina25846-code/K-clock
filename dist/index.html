@@ -37,6 +37,8 @@ body { background:transparent; font-family:'Segoe UI',sans-serif; overflow:hidde
 .close-panel { position:absolute; top:8px; right:10px; color:rgba(184,184,184,0.5); font-size:13px; background:none; border:none; cursor:pointer; }
 
 /* 알람 */
+.alarm-sound-row { margin-bottom:8px; }
+.alarm-sound-row select { width:100%; }
 .alarm-row { display:flex; align-items:center; gap:6px; margin-bottom:8px; }
 .alarm-row input[type=time] { width:100px; flex-shrink:0; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:5px; color:#b8b8b8; padding:4px 6px; font-size:12px; outline:none; font-family:inherit; }
 .alarm-row input[type=text] { flex:1; min-width:0; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:5px; color:#b8b8b8; padding:4px 6px; font-size:12px; outline:none; font-family:inherit; }
@@ -107,6 +109,16 @@ select option { background:#1e1e1e; color:#b8b8b8; }
   <div class="panel" id="panel-alarm">
     <div class="panel-title">알람</div>
     <button class="close-panel" onclick="closePanel()">✕</button>
+    <div class="alarm-sound-row">
+      <select id="alarm-sound" onchange="previewAlarmSound(this.value)">
+        <option value="sounds/alarm.wav">기본 알림음</option>
+        <option value="sounds/beep.wav">클래식 비프</option>
+        <option value="sounds/chime.wav">차임벨</option>
+        <option value="sounds/gentle.wav">부드러운 알림</option>
+        <option value="sounds/retro.wav">레트로 벨</option>
+        <option value="sounds/pulse.wav">디지털 펄스</option>
+      </select>
+    </div>
     <div class="alarm-row">
       <input type="time" id="alarm-time" value="07:00">
       <input type="text" id="alarm-name" placeholder="이름">
@@ -231,7 +243,7 @@ function upd(){
   const sc=String(n.getSeconds()).padStart(2,'0');
   txtClock.textContent=showSec?`${h}:${mi}:${sc}`:`${h}:${mi}`;
   const hm=`${h}:${mi}`;
-  alarms.forEach(a=>{if(a.enabled&&a.t===hm&&n.getSeconds()===0){triggerAlarm();if(!a.repeat){a.enabled=false;saveAlarms();renderAlarms();}}});
+  alarms.forEach(a=>{if(a.enabled&&a.t===hm&&n.getSeconds()===0){triggerAlarm(a.sound);if(!a.repeat){a.enabled=false;saveAlarms();renderAlarms();}}});
 }
 setInterval(upd,1000);upd();
 changeStyle("'KoPubWorld Dotum Bold',sans-serif");
@@ -335,19 +347,25 @@ function changeBrightness(v){
   const c='#'+hex+hex+hex;
   document.getElementById('seg-wrap').querySelectorAll('.seg,.dot').forEach(s=>s.style.background=c);
   txtClock.style.color=c;
-  document.querySelectorAll('.panel-title,.setting-row span,.alarm-item,.empty-msg,#cd-display,.cd-btns button,.alarm-row input,.btn-add,.cd-row input,.cd-row span').forEach(el=>el.style.color=c);
+  document.querySelectorAll('.panel-title,.setting-row span,.alarm-item,.empty-msg,#cd-display,.cd-btns button,.alarm-row input,.btn-add,.cd-row input,.cd-row span,#alarm-sound').forEach(el=>el.style.color=c);
   document.querySelectorAll('.close-panel').forEach(el=>el.style.color=c+'88');
 }
 
 // ── 알람 ──
-function triggerAlarm(){
+function triggerAlarm(soundFile){
   if(flashTimer) return;
   const cr=document.getElementById('clock-area');
   cr.classList.add('flashing');
+  alarmAudio.src=soundFile||'sounds/alarm.wav';
   alarmAudio.currentTime=0;
   alarmAudio.loop=true;
   alarmAudio.play().catch(()=>{});
   flashTimer=setTimeout(stopAlarm, 30000);
+}
+function previewAlarmSound(file){
+  const p=new Audio(file);
+  p.volume=0.6;
+  p.play().catch(()=>{});
 }
 function stopAlarm(){
   if(!flashTimer) return;
@@ -359,8 +377,9 @@ function saveAlarms(){ localStorage.setItem('alarms',JSON.stringify(alarms)); }
 function addAlarm(){
   const t=document.getElementById('alarm-time').value;
   const name=document.getElementById('alarm-name').value.trim()||'알람';
+  const sound=document.getElementById('alarm-sound').value;
   if(!t) return;
-  alarms.push({id:Date.now(),t,name,enabled:true,repeat:repeatMode});
+  alarms.push({id:Date.now(),t,name,enabled:true,repeat:repeatMode,sound});
   document.getElementById('alarm-name').value='';
   repeatMode=false;
   document.getElementById('btn-repeat').classList.remove('active');

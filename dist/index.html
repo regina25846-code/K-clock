@@ -476,16 +476,16 @@ function onAlarmDragEnd(){
   const {item, idx, curIdx, children}=dragCtx;
   document.removeEventListener('mousemove', onAlarmDragMove);
   document.removeEventListener('mouseup', onAlarmDragEnd);
-  if(curIdx!==idx){
-    const moved=alarms.splice(idx,1)[0];
-    alarms.splice(curIdx,0,moved);
-    saveAlarms();
-  }
   item.classList.remove('dragging');
   item.style.transition=''; item.style.transform='';
   children.forEach(c=>{ if(c!==item){ c.style.transition=''; c.style.transform=''; } });
   dragCtx=null;
-  renderAlarms();
+  if(curIdx!==idx){
+    const moved=alarms.splice(idx,1)[0];
+    alarms.splice(curIdx,0,moved);
+    saveAlarms();
+    renderAlarms();
+  }
 }
 
 // ── 카운트다운 ──

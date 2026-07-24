@@ -99,6 +99,17 @@
   const v = params.get('v');
   if (v) document.getElementById('ver').textContent = 'v' + v;
 
+  // 실제 윈도우 폰트/DPI에 따라 카드의 실제 렌더링 높이가 달라질 수 있어서(맥 프리뷰 렌더링과
+  // 실제 Windows 렌더링 사이 오차가 있었음), 고정값으로 창 크기를 추측하는 대신 로드 직후
+  // 실제 렌더링된 높이를 측정해서 창 크기를 거기에 정확히 맞춘다 — 이후 폰트가 달라져도 항상 안전.
+  window.addEventListener('load', async () => {
+    if (!window.__TAURI__) return;
+    const h = Math.ceil(document.querySelector('.dialog').getBoundingClientRect().height) + 4;
+    try {
+      await window.__TAURI__.core.invoke('set_window_size', { width: 340, height: h });
+    } catch (e) {}
+  });
+
   async function closeAbout() {
     if (window.__TAURI__) {
       try {

@@ -32,20 +32,21 @@
   .close-btn:hover { background:#e0e0dd; }
   .body {
     flex:1; display:flex; flex-direction:column;
-    align-items:center;
-    padding:4px 24px 20px; text-align:center;
+    align-items:center; justify-content:space-between;
+    padding:4px 24px 28px; text-align:center;
   }
+  .body-top { display:flex; flex-direction:column; align-items:center; }
   .icon { width:88px; height:88px; border-radius:21px; margin-bottom:16px;
     box-shadow: 0 0 0 1px rgba(0,0,0,.05), 0 8px 22px rgba(30,30,40,.14); }
   .appname { font-size:18px; font-weight:800; color:#1a1a1e; margin-bottom:4px; }
   .version { font-size:12px; font-weight:500; color:#8a8a90; margin-bottom:16px; }
   .divider { width:100%; height:1px; background:#ededea; margin-bottom:16px; }
   .desc { font-size:13px; color:#4a4a50; line-height:1.75; margin-bottom:14px; }
-  .copy { font-size:11px; color:#9a9a9e; margin-bottom:18px; }
-  .actions { display:flex; align-items:center; justify-content:center; gap:10px; }
+  .copy { font-size:11px; color:#9a9a9e; }
+  .actions { display:flex; flex-direction:column; align-items:center; gap:8px; }
   .update-btn {
     background:#ececea; color:#333333; border:none; border-radius:8px;
-    padding:7px 14px; font-size:12px; font-weight:600; cursor:pointer;
+    padding:7px 16px; font-size:12px; font-weight:600; cursor:pointer;
   }
   .update-btn:hover { background:#e0e0dd; }
   .update-status { font-size:11px; color:#9a9a9e; }
@@ -58,32 +59,34 @@
     <button class="close-btn" onclick="closeAbout()">✕</button>
   </div>
   <div class="body">
-    <svg class="icon" viewBox="0 0 100 100">
-      <defs>
-        <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#F59E0B"/>
-          <stop offset="100%" stop-color="#D97706"/>
-        </linearGradient>
-      </defs>
-      <rect x="2" y="2" width="96" height="96" rx="23" fill="url(#g)"/>
-      <rect x="6" y="6" width="88" height="88" rx="20" fill="none" stroke="#fff" stroke-width="1.6" opacity="0.35"/>
-      <circle cx="47" cy="47" r="30" fill="none" stroke="#fff" stroke-width="4.5"/>
-      <line x1="47" y1="17" x2="47" y2="22" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
-      <line x1="77" y1="47" x2="72" y2="47" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
-      <line x1="47" y1="77" x2="47" y2="72" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
-      <line x1="17" y1="47" x2="22" y2="47" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
-      <circle cx="47" cy="47" r="3.4" fill="#fff"/>
-      <line x1="47" y1="47" x2="47" y2="28" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
-      <line x1="47" y1="47" x2="62" y2="53" stroke="#fff" stroke-width="4.2" stroke-linecap="round"/>
-      <circle cx="80" cy="80" r="13" fill="#D97706"/>
-      <circle cx="80" cy="80" r="13" fill="none" stroke="#fff" stroke-width="1.2" opacity="0.5"/>
-      <text x="80" y="84.68" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16.9" font-weight="800" fill="#fff">K</text>
-    </svg>
-    <div class="appname">K-Clock</div>
-    <div class="version" id="ver">v1.3.7</div>
-    <div class="divider"></div>
-    <div class="desc">시스템 트레이 상주형 시계<br>알람 · 카운트다운 · 타이머 지원</div>
-    <div class="copy">© 2026 KrisB. All rights reserved.</div>
+    <div class="body-top">
+      <svg class="icon" viewBox="0 0 100 100">
+        <defs>
+          <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#F59E0B"/>
+            <stop offset="100%" stop-color="#D97706"/>
+          </linearGradient>
+        </defs>
+        <rect x="2" y="2" width="96" height="96" rx="23" fill="url(#g)"/>
+        <rect x="6" y="6" width="88" height="88" rx="20" fill="none" stroke="#fff" stroke-width="1.6" opacity="0.35"/>
+        <circle cx="47" cy="47" r="30" fill="none" stroke="#fff" stroke-width="4.5"/>
+        <line x1="47" y1="17" x2="47" y2="22" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+        <line x1="77" y1="47" x2="72" y2="47" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+        <line x1="47" y1="77" x2="47" y2="72" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+        <line x1="17" y1="47" x2="22" y2="47" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="47" cy="47" r="3.4" fill="#fff"/>
+        <line x1="47" y1="47" x2="47" y2="28" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+        <line x1="47" y1="47" x2="62" y2="53" stroke="#fff" stroke-width="4.2" stroke-linecap="round"/>
+        <circle cx="80" cy="80" r="13" fill="#D97706"/>
+        <circle cx="80" cy="80" r="13" fill="none" stroke="#fff" stroke-width="1.2" opacity="0.5"/>
+        <text x="80" y="84.68" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16.9" font-weight="800" fill="#fff">K</text>
+      </svg>
+      <div class="appname">K-Clock</div>
+      <div class="version" id="ver">v1.3.7</div>
+      <div class="divider"></div>
+      <div class="desc">시스템 트레이 상주형 시계<br>알람 · 카운트다운 · 타이머 지원</div>
+      <div class="copy">© 2026 KrisB. All rights reserved.</div>
+    </div>
     <div class="actions">
       <button class="update-btn" disabled>업데이트 확인</button>
       <span class="update-status">최신 버전 사용 중</span>

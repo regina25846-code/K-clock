@@ -92,7 +92,7 @@ fn open_about(app: tauri::AppHandle) {
         tauri::WebviewUrl::App(format!("about.html?v={}", env!("CARGO_PKG_VERSION")).into()),
     )
     .title("프로그램 정보")
-    .inner_size(320.0, 360.0)
+    .inner_size(340.0, 388.0)
     .resizable(false)
     .decorations(false)
     .transparent(true)

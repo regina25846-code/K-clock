@@ -293,6 +293,15 @@ function toggleAlwaysOnTop(){
   invoke('set_always_on_top',{on_top:on});
 }
 
+// 2026-07-24: 윈도우가 UAC/전체화면전환/모니터변경 등으로 항상위를 조용히 풀어버리는 경우가 있어서,
+// 핀이 켜져있는 동안 주기적으로 재적용(이미 topmost면 사실상 no-op이라 안전)
+setInterval(()=>{
+  const tog=document.getElementById('tog-pin');
+  if(tog && !tog.classList.contains('off')){
+    invoke('set_always_on_top',{on_top:true});
+  }
+},4000);
+
 async function openPanel(name){
   hideMenu();
   if(!lockedPos){

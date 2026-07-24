@@ -9,7 +9,7 @@
   html, body { width:100%; height:100%; background:transparent; overflow:hidden; font-family:"Malgun Gothic","Apple SD Gothic Neo","Segoe UI",sans-serif; }
   body { display:flex; align-items:center; justify-content:center; }
   .dialog {
-    width:340px; height:388px;
+    width:340px;
     background:#faf9f7;
     border-radius:16px;
     border:1px solid #ecece8;
@@ -19,12 +19,12 @@
   }
   .header {
     position:relative; display:flex; align-items:center; justify-content:center;
-    padding:14px 16px; flex-shrink:0;
+    padding:24px 16px 18px; flex-shrink:0;
     -webkit-app-region: drag;
   }
   .header-title { font-size:13px; font-weight:800; color:#3a3a3e; }
   .close-btn {
-    position:absolute; right:14px; top:14px;
+    position:absolute; right:16px; top:21px;
     width:28px; height:28px; border-radius:50%;
     background:#ececea; color:#555555; font-size:12px;
     border:none; cursor:pointer; display:flex; align-items:center; justify-content:center;
@@ -33,8 +33,8 @@
   .close-btn:hover { background:#e0e0dd; }
   .body {
     flex:1; display:flex; flex-direction:column;
-    align-items:center; justify-content:space-between;
-    padding:4px 24px 28px; text-align:center;
+    align-items:center; justify-content:flex-start; gap:26px;
+    padding:8px 24px 30px; text-align:center;
   }
   .body-top { display:flex; flex-direction:column; align-items:center; }
   .icon { width:88px; height:88px; border-radius:21px; margin-bottom:16px;

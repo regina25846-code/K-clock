@@ -67,10 +67,15 @@ fn list_system_sounds() -> Vec<serde_json::Value> {
                     .unwrap_or(false);
                 if is_wav {
                     if let Some(name) = path.file_stem().and_then(|s| s.to_str()) {
-                        sounds.push(serde_json::json!({
-                            "name": name,
-                            "path": path.to_string_lossy().to_string()
-                        }));
+                        // 알람으로 쓰기 적당한 "또렷한" 계열만 남김 — 전체 목록은 너무
+                        // 잡다해서 형이 알람/링 계열만 남기라고 지정함(2026-08-02).
+                        let lower = name.to_lowercase();
+                        if lower.contains("alarm") || lower.contains("ring") {
+                            sounds.push(serde_json::json!({
+                                "name": name,
+                                "path": path.to_string_lossy().to_string()
+                            }));
+                        }
                     }
                 }
             }

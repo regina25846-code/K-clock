@@ -135,14 +135,8 @@ select option { background:#1e1e1e; color:#b8b8b8; }
     <button class="close-panel" onclick="closePanel()">✕</button>
     <div class="alarm-sound-row">
       <div class="cdd" id="sound-dd">
-        <button type="button" class="cdd-btn" id="sound-dd-btn" onclick="toggleDropdown('sound-dd')">기본 알림음</button>
+        <button type="button" class="cdd-btn" id="sound-dd-btn" onclick="toggleDropdown('sound-dd')">불러오는 중...</button>
         <div class="cdd-list">
-          <div class="cdd-item" onclick="pickSound('sounds/alarm.wav','기본 알림음')">기본 알림음</div>
-          <div class="cdd-item" onclick="pickSound('sounds/beep.wav','클래식 비프')">클래식 비프</div>
-          <div class="cdd-item" onclick="pickSound('sounds/chime.wav','차임벨')">차임벨</div>
-          <div class="cdd-item" onclick="pickSound('sounds/gentle.wav','부드러운 알림')">부드러운 알림</div>
-          <div class="cdd-item" onclick="pickSound('sounds/retro.wav','레트로 벨')">레트로 벨</div>
-          <div class="cdd-item" onclick="pickSound('sounds/pulse.wav','디지털 펄스')">디지털 펄스</div>
           <div id="system-sound-items"></div>
         </div>
       </div>
@@ -441,38 +435,40 @@ function pickStyle(v,label){
   document.querySelector('#style-dd .cdd-list').classList.remove('open');
   changeStyle(v);
 }
-function pickSound(v,label){
+function pickSound(v,label,silent){
   document.getElementById('sound-dd-btn').textContent=label;
   document.getElementById('alarm-sound').value=v;
   document.querySelector('#sound-dd .cdd-list').classList.remove('open');
-  previewAlarmSound(v);
+  if(!silent) previewAlarmSound(v);
   setTimeout(syncWindowWidth,10);
 }
 document.addEventListener('mousedown',function(e){ if(e.button!==0) return; if(!e.target.closest('.cdd')) closeAllDropdowns(); });
 
-// 윈도우 시스템 사운드(C:\Windows\Media 상당 경로)를 앱에 번들하지 않고 목록만 읽어와서
-// 드롭다운 맨 아래에 추가로 붙인다 — 못 읽으면(맥 개발중이거나 실패시) 조용히 그냥
-// 기존 6개 번들 사운드만 남는다(2026-08-02).
+// 윈도우 시스템 사운드(C:\Windows\Media 상당 경로, Alarm/Ring 계열만)를 앱에 번들하지
+// 않고 목록만 읽어와서 채운다 — 형이 기존 번들 6개는 다 빼고 이것만 쓰라고 해서
+// (2026-08-02) 유일한 소스가 됨. 목록 로드 후 첫 항목을 기본값으로 자동 선택.
 let systemSoundsLoaded=false;
 async function loadSystemSounds(){
   if(systemSoundsLoaded) return;
   systemSoundsLoaded=true;
+  const container=document.getElementById('system-sound-items');
   try {
     const list = await invoke('list_system_sounds');
-    if(!list || !list.length) return;
-    const container=document.getElementById('system-sound-items');
-    const divider=document.createElement('div');
-    divider.className='cdd-divider';
-    divider.textContent='윈도우 시스템 사운드';
-    container.appendChild(divider);
-    list.forEach(s=>{
+    if(!list || !list.length){
+      document.getElementById('sound-dd-btn').textContent='사용 가능한 소리 없음';
+      return;
+    }
+    list.forEach((s,i)=>{
       const item=document.createElement('div');
       item.className='cdd-item';
       item.textContent=s.name;
       item.addEventListener('click',()=>pickSound(s.path, s.name));
       container.appendChild(item);
+      if(i===0) pickSound(s.path, s.name, true);
     });
-  } catch(e) {}
+  } catch(e) {
+    document.getElementById('sound-dd-btn').textContent='사용 가능한 소리 없음';
+  }
 }
 loadSystemSounds();
 

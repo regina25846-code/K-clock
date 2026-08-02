@@ -13,6 +13,18 @@ fn set_always_on_top(window: tauri::Window, on_top: bool) {
     let _ = window.set_always_on_top(on_top);
 }
 
+// 2026-08-02: tao(Tauri의 Windows 백엔드)의 set_always_on_top는 내부에 저장된 상태값과
+// 요청값이 같으면 실제 SetWindowPos 호출 자체를 건너뛴다(WindowFlags::apply_diff의
+// diff-empty 조기 리턴, tao 소스로 직접 확인함). 그래서 이미 topmost인 상태에서 계속
+// true만 반복 호출하면 아무 효과가 없음 — 다른 항상위 창에 밀려도 절대 다시 안 올라옴.
+// false→true로 강제 토글해서 매번 실제 상태 변화를 만들어 SetWindowPos가 진짜로
+// 다시 호출되게 함.
+#[tauri::command]
+fn refresh_always_on_top(window: tauri::Window) {
+    let _ = window.set_always_on_top(false);
+    let _ = window.set_always_on_top(true);
+}
+
 #[tauri::command]
 fn minimize_window(window: tauri::Window) {
     let _ = window.minimize();
@@ -219,6 +231,7 @@ fn main() {
             open_about,
             close_about,
             check_for_update,
+            refresh_always_on_top,
         ])
         .run(tauri::generate_context!())
         .expect("K-Clock 실행 실패");

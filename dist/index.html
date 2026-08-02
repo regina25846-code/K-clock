@@ -336,11 +336,14 @@ function toggleAlwaysOnTop(){
 }
 
 // 2026-07-24: 윈도우가 UAC/전체화면전환/모니터변경 등으로 항상위를 조용히 풀어버리는 경우가 있어서,
-// 핀이 켜져있는 동안 주기적으로 재적용(이미 topmost면 사실상 no-op이라 안전)
+// 핀이 켜져있는 동안 주기적으로 재적용.
+// 2026-08-02: set_always_on_top(true)만 반복 호출하는 건 이미 topmost 상태일 때 tao 내부에서
+// 완전히 무시됨(상태가 안 바뀌면 SetWindowPos 자체를 안 부름) — 그래서 간격을 아무리 줄여도
+// 다른 항상위 창에 밀리면 다시 안 올라왔음. false→true로 강제 토글하는 refresh_always_on_top으로 교체.
 setInterval(()=>{
   const tog=document.getElementById('tog-pin');
   if(tog && !tog.classList.contains('off')){
-    invoke('set_always_on_top',{on_top:true});
+    invoke('refresh_always_on_top');
   }
 },500);
 

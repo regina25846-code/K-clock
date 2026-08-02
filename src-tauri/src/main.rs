@@ -37,7 +37,7 @@ fn start_dragging(window: tauri::Window) {
 fn get_window_pos(window: tauri::Window) -> (i32, i32) {
     let pos = window.outer_position().unwrap_or(tauri::PhysicalPosition { x: 0, y: 0 });
     let scale = window.scale_factor().unwrap_or(1.0);
-    ((pos.x as f64 / scale) as i32, (pos.y as f64 / scale) as i32)
+    ((pos.x as f64 / scale).round() as i32, (pos.y as f64 / scale).round() as i32)
 }
 
 #[tauri::command]

@@ -14,7 +14,7 @@ body { background:transparent; font-family:'Segoe UI',sans-serif; overflow:hidde
 
 #clock-area { width:100%; display:flex; flex-direction:column; align-items:center; cursor:grab; background:transparent; }
 #clock-area.dragging { cursor:grabbing; }
-#clock-row { height:130px; min-height:130px; display:flex; align-items:center; justify-content:center; width:100%; }
+#clock-row { display:flex; align-items:center; justify-content:center; width:100%; }
 
 /* 7세그먼트 */
 .clock-7seg { display:flex; align-items:center; }
@@ -232,6 +232,7 @@ const alarms=[];
 let flashTimer=null;
 let repeatMode=false;
 let sizeDebounce=null;
+let syncBusy=false, syncPending=false;
 function toggleRepeatBtn(){
   repeatMode=!repeatMode;
   document.getElementById('btn-repeat').classList.toggle('active',repeatMode);
@@ -267,11 +268,6 @@ invoke('get_autostart').then(on=>{
   }
 });
 
-function adjustHeight(){
-  const h=document.getElementById('clock-area').offsetHeight;
-  invoke('set_window_height',{height:h});
-}
-
 function toggleSec(){
   const tog=document.getElementById('tog-sec');
   tog.classList.toggle('off');
@@ -289,20 +285,40 @@ function clockContentWidth(){
   const el=(seg.style.display==='none') ? txtClock : seg;
   return Math.ceil(el.getBoundingClientRect().width);
 }
+// 높이도 마찬가지로 실제 렌더링된 크기를 잰다 — #clock-row에 고정 height를 주면 7세그먼트를
+// transform:scale로 키웠을 때(레이아웃 크기는 그대로고 화면에 보이는 크기만 커짐) 실제 차지하는
+// 공간과 안 맞아서, getBoundingClientRect로 눈에 보이는 크기를 직접 측정.
+function clockContentHeight(){
+  const seg=document.getElementById('seg-wrap');
+  const el=(seg.style.display==='none') ? txtClock : seg;
+  return Math.ceil(el.getBoundingClientRect().height);
+}
 // 설정 패널(고정 300px 폭)이 열려있을 때만 300px 이상을 보장하고,
-// 시계만 떠있는 평상시엔 실제 시계 너비만큼만 창을 줄여서 좌우 여백(=클릭 방해 영역)을 없앤다.
+// 시계만 떠있는 평상시엔 실제 시계 크기만큼만 창을 줄여서 상하좌우 여백(=클릭 방해 영역)을 없앤다.
+// 여백은 최대한 타이트하게(형 요청) — 안티에일리어싱 가장자리 정도만 여유를 둠.
+// 최소 너비 200은 tauri.conf.json의 minWidth와 반드시 일치시킬 것 — 그보다 작은 값을 요청하면
+// 네이티브 창이 실제로는 minWidth에 걸려서 멈추는데 위치 계산은 요청값 기준으로 해버려서
+// 창이 계속 한쪽으로 밀리는 누적 오차가 생김.
 async function syncWindowWidth(){
-  const panelOpen=!!document.querySelector('.panel.open');
-  const w=Math.max(clockContentWidth()+40, 80, panelOpen?300:0);
-  const h=document.getElementById('clock-area').offsetHeight;
-  // 예전엔 패널 열 때 캡처해둔 위치(lockedPos)를 계속 재사용해서, 그 뒤로 창을 옮겼거나
-  // 시간이 지나면 "그때 그 자리"로 되돌아가는 것처럼 보이는 문제가 있었음 —
-  // 매번 지금 실제 위치를 새로 읽어서 그 자리 기준으로만 중심을 맞추도록 변경.
-  const pos=await invoke('get_window_pos');
-  const cx=pos[0]+Math.round(window.innerWidth/2);
-  await invoke('set_window_size',{width:w,height:h});
-  const newX=Math.max(0, cx - Math.round(w/2));
-  await invoke('set_window_pos',{x:newX,y:pos[1]});
+  if(syncBusy){ syncPending=true; return; }
+  syncBusy=true;
+  do {
+    syncPending=false;
+    const panelEl=document.querySelector('.panel.open');
+    const w=Math.max(clockContentWidth()+14, 200, panelEl?300:0);
+    // 90은 tauri.conf.json의 minHeight와 일치 — 이보다 작게 요청해봐야 네이티브 창은 안 줄어들면서
+    // 요청값 기준 계산만 어긋나므로 의미 없음(폭의 200 하한과 동일한 이유).
+    const h=Math.max(clockContentHeight()+10+(panelEl?panelEl.offsetHeight:0), 90);
+    // 예전엔 패널 열 때 캡처해둔 위치(lockedPos)를 계속 재사용해서, 그 뒤로 창을 옮겼거나
+    // 시간이 지나면 "그때 그 자리"로 되돌아가는 것처럼 보이는 문제가 있었음 —
+    // 매번 지금 실제 위치를 새로 읽어서 그 자리 기준으로만 중심을 맞추도록 변경.
+    const pos=await invoke('get_window_pos');
+    const cx=pos[0]+Math.round(window.innerWidth/2);
+    await invoke('set_window_size',{width:w,height:h});
+    const newX=Math.max(0, cx - Math.round(w/2));
+    await invoke('set_window_pos',{x:newX,y:pos[1]});
+  } while(syncPending);
+  syncBusy=false;
 }
 
 async function toggleAutostart(){
@@ -332,16 +348,16 @@ function openPanel(name){
   hideMenu();
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('open'));
   document.getElementById('panel-'+name).classList.add('open');
-  setTimeout(()=>{ adjustHeight(); syncWindowWidth(); },10);
+  setTimeout(syncWindowWidth,10);
 }
 function closePanel(){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('open'));
-  setTimeout(()=>{ adjustHeight(); syncWindowWidth(); },10);
+  setTimeout(syncWindowWidth,10);
 }
 
 function closeInfo(){
   const d=document.getElementById('info-dialog');
-  if(d){ d.remove(); setTimeout(adjustHeight,10); }
+  if(d){ d.remove(); setTimeout(syncWindowWidth,10); }
 }
 function showInfo(){
   hideMenu();
@@ -441,7 +457,7 @@ function renderAlarms(){
   const list=document.getElementById('alarm-list');
   const empty=document.getElementById('alarm-empty');
   list.innerHTML='';
-  if(!alarms.length){empty.style.display='block';setTimeout(adjustHeight,10);return;}
+  if(!alarms.length){empty.style.display='block';setTimeout(syncWindowWidth,10);return;}
   empty.style.display='none';
   const hex=brightness.toString(16).padStart(2,'0');
   const c='#'+hex+hex+hex;
@@ -460,7 +476,7 @@ function renderAlarms(){
     div.addEventListener('mousedown', e=>startAlarmDrag(e, div));
     list.appendChild(div);
   });
-  setTimeout(adjustHeight,10);
+  setTimeout(syncWindowWidth,10);
 }
 
 // ── 알람 드래그 정렬 ──
@@ -589,8 +605,11 @@ const neededH=Math.max(curH, my+menuH+4);
 });
 document.addEventListener('mousedown',function(e){ if(e.button!==0) return; if(!e.target.closest('#ctx-menu')) hideMenu(); });
 function hideMenu(){
+  // 메뉴가 실제로 떠 있었을 때만 되돌림 리사이즈를 하도록 가드 — 이게 없으면 document 전체의
+  // mousedown마다(메뉴를 연 적이 없어도) 매 클릭마다 창 리사이즈/재배치가 일어남.
+  const wasOpen = menu.style.display === 'block';
   menu.style.display='none';
-  if(!document.querySelector('.panel.open')) setTimeout(()=>{ adjustHeight(); syncWindowWidth(); },10);
+  if(wasOpen && !document.querySelector('.panel.open')) setTimeout(syncWindowWidth,10);
 }
 function closeApp(){ hideMenu(); invoke('close_app'); }
 

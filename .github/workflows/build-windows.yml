@@ -50,6 +50,8 @@ jobs:
         run: |
           VERSION="${{ steps.ver.outputs.version }}"
           SIG=$(cat src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.nsis.zip.sig 2>/dev/null || cat src-tauri/target/release/bundle/nsis/*.nsis.zip.sig 2>/dev/null || echo "")
+          # minisign .sig 파일은 여러 줄(주석+base64)이라 그대로 JSON 문자열에 넣으면 깨짐 — 한 줄로 압축
+          SIG=$(echo "$SIG" | tr -d '\r\n')
           URL="https://github.com/regina25846-code/K-clock/releases/download/v${VERSION}/K-Clock_${VERSION}_x64-setup.nsis.zip"
           mkdir -p update
           printf '{\n  "version": "%s",\n  "notes": "K-Clock v%s",\n  "pub_date": "%s",\n  "platforms": {\n    "windows-x86_64": {\n      "signature": "%s",\n      "url": "%s"\n    }\n  }\n}\n' \

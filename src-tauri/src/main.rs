@@ -17,10 +17,31 @@ fn set_always_on_top(window: tauri::Window, on_top: bool) {
 // 요청값이 같으면 실제 SetWindowPos 호출 자체를 건너뛴다(WindowFlags::apply_diff의
 // diff-empty 조기 리턴, tao 소스로 직접 확인함). 그래서 이미 topmost인 상태에서 계속
 // true만 반복 호출하면 아무 효과가 없음 — 다른 항상위 창에 밀려도 절대 다시 안 올라옴.
-// false→true로 강제 토글해서 매번 실제 상태 변화를 만들어 SetWindowPos가 진짜로
-// 다시 호출되게 함.
+// false→true로 강제 토글하는 방식으로 처음 고쳤더니 실제로 다시 올라오긴 하는데,
+// 매 주기마다 잠깐 항상위가 풀렸다 붙는 게 눈에 보이는 깜빡임으로 나타남(형 실측 확인).
+// 그래서 tao의 캐시된 플래그를 아예 우회하고, Win32 SetWindowPos(HWND_TOPMOST)를
+// 직접 호출 — 이미 맨 위에 있어도 이 호출 자체는 화면 변화가 없어서 깜빡임 없이
+// 매번 진짜로 재적용됨.
+#[cfg(windows)]
+fn force_topmost(hwnd: windows::Win32::Foundation::HWND) {
+    use windows::Win32::UI::WindowsAndMessaging::{
+        SetWindowPos, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
+    };
+    unsafe {
+        let _ = SetWindowPos(hwnd, Some(HWND_TOPMOST), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    }
+}
+
 #[tauri::command]
 fn refresh_always_on_top(window: tauri::Window) {
+    #[cfg(windows)]
+    {
+        if let Ok(hwnd) = window.hwnd() {
+            force_topmost(hwnd);
+            return;
+        }
+    }
+    // Windows가 아니거나 hwnd 조회 실패 시 폴백(깜빡임 있을 수 있으나 안전한 기존 방식)
     let _ = window.set_always_on_top(false);
     let _ = window.set_always_on_top(true);
 }

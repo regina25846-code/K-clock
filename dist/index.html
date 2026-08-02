@@ -14,7 +14,10 @@ body { background:transparent; font-family:'Segoe UI',sans-serif; overflow:hidde
 
 #clock-area { width:100%; display:flex; flex-direction:column; align-items:center; cursor:grab; background:transparent; }
 #clock-area.dragging { cursor:grabbing; }
-#clock-row { display:flex; align-items:center; justify-content:center; width:100%; }
+/* align-items:flex-start — center로 두면 7세그먼트 확대 시 예약해둔 min-height 안에서
+   내용물이 세로로 다시 가운데 정렬되면서 transform-origin:'center top' 가정이 깨져
+   패널과 겹치는 폭이 더 커짐(2026-08-02, min-height 보정 추가하며 발견). */
+#clock-row { display:flex; align-items:flex-start; justify-content:center; width:100%; }
 
 /* 7세그먼트 */
 .clock-7seg { display:flex; align-items:center; }
@@ -498,6 +501,13 @@ function previewSize(v){
   // (오푸스 리뷰로 발견, 2026-08-02). center top으로 바꿔 아래쪽으로만 커지게 해서
   // clockContentHeight()가 재는 높이 안에 항상 다 들어오게 함.
   sw.style.transformOrigin='center top';
+  // transform:scale()은 페인트에만 영향을 주고 문서 흐름상의 박스 크기(offsetHeight)는
+  // 그대로라, #clock-row에 예약된 공간이 확대 전 크기(40px 기준)로 남아있음 —
+  // 그래서 그 아래에 오는 설정 패널이 실제로 커진(확대된) 시계 위로 겹쳐 보이던 버그
+  // (형이 발견, 2026-08-02). min-height를 실제 스케일된 높이로 직접 맞춰서 해결.
+  // 텍스트 폰트 모드는 font-size로 직접 크기를 키워서 레이아웃 박스 자체가 이미
+  // 시각적 크기와 일치하므로, 7세그먼트가 실제로 보일 때만 이 보정을 적용한다.
+  document.getElementById('clock-row').style.minHeight = (sw.style.display!=='none') ? (sw.offsetHeight*scale)+'px' : '';
   document.getElementById('size-val').textContent=v;
 }
 async function changeSize(v){

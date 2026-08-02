@@ -89,11 +89,18 @@ select option { background:#1e1e1e; color:#b8b8b8; }
 .alarm-sound-row .cdd { width:100%; }
 .cdd-btn { text-align:left; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:5px; color:#b8b8b8; padding:3px 6px; font-size:11px; outline:none; cursor:pointer; font-family:inherit; white-space:nowrap; }
 .alarm-sound-row .cdd-btn { width:100%; }
-.cdd-list { display:none; position:absolute; top:100%; right:0; margin-top:2px; background:#1e1e1e; border:1px solid rgba(255,255,255,0.15); border-radius:5px; min-width:100%; max-height:160px; overflow-y:auto; z-index:50; white-space:nowrap; }
+.cdd-list { display:none; position:absolute; top:100%; right:0; margin-top:2px; background:#1e1e1e; border:1px solid rgba(255,255,255,0.15); border-radius:5px; min-width:100%; max-height:160px; overflow-y:auto; overflow-x:hidden; z-index:50; white-space:nowrap; }
 .alarm-sound-row .cdd-list { left:0; right:0; white-space:normal; }
 .cdd-list.open { display:block; }
 .cdd-item { padding:5px 8px; font-size:11px; color:#b8b8b8; cursor:pointer; }
 .cdd-item:hover { background:rgba(255,255,255,0.1); }
+.cdd-divider { padding:4px 8px 2px; font-size:9px; color:#777; border-top:1px solid rgba(255,255,255,0.1); margin-top:2px; }
+/* 윈도우 기본(각진 화살표 버튼) 스크롤바가 다크 플랫 디자인과 안 어울려서(2026-08-02, 형 지적)
+   슬림한 커스텀 스크롤바로 교체. WebView2는 크로미움 기반이라 webkit 스크롤바 CSS가 그대로 먹음. */
+.cdd-list::-webkit-scrollbar { width:6px; }
+.cdd-list::-webkit-scrollbar-track { background:transparent; }
+.cdd-list::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.25); border-radius:3px; }
+.cdd-list::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,0.4); }
 .color-btn { padding:3px 9px; border:1px solid rgba(255,255,255,0.18); border-radius:4px; font-size:11px; cursor:pointer; background:transparent; color:#b8b8b8; }
 .color-btn.active { border-color:#aaa; background:rgba(255,255,255,0.15); }
 
@@ -136,6 +143,7 @@ select option { background:#1e1e1e; color:#b8b8b8; }
           <div class="cdd-item" onclick="pickSound('sounds/gentle.wav','부드러운 알림')">부드러운 알림</div>
           <div class="cdd-item" onclick="pickSound('sounds/retro.wav','레트로 벨')">레트로 벨</div>
           <div class="cdd-item" onclick="pickSound('sounds/pulse.wav','디지털 펄스')">디지털 펄스</div>
+          <div id="system-sound-items"></div>
         </div>
       </div>
       <input type="hidden" id="alarm-sound" value="sounds/alarm.wav">
@@ -442,6 +450,32 @@ function pickSound(v,label){
 }
 document.addEventListener('mousedown',function(e){ if(e.button!==0) return; if(!e.target.closest('.cdd')) closeAllDropdowns(); });
 
+// 윈도우 시스템 사운드(C:\Windows\Media 상당 경로)를 앱에 번들하지 않고 목록만 읽어와서
+// 드롭다운 맨 아래에 추가로 붙인다 — 못 읽으면(맥 개발중이거나 실패시) 조용히 그냥
+// 기존 6개 번들 사운드만 남는다(2026-08-02).
+let systemSoundsLoaded=false;
+async function loadSystemSounds(){
+  if(systemSoundsLoaded) return;
+  systemSoundsLoaded=true;
+  try {
+    const list = await invoke('list_system_sounds');
+    if(!list || !list.length) return;
+    const container=document.getElementById('system-sound-items');
+    const divider=document.createElement('div');
+    divider.className='cdd-divider';
+    divider.textContent='윈도우 시스템 사운드';
+    container.appendChild(divider);
+    list.forEach(s=>{
+      const item=document.createElement('div');
+      item.className='cdd-item';
+      item.textContent=s.name;
+      item.addEventListener('click',()=>pickSound(s.path, s.name));
+      container.appendChild(item);
+    });
+  } catch(e) {}
+}
+loadSystemSounds();
+
 function previewSize(v){
   txtClock.style.fontSize=v+'px';
   const scale=v/40;
@@ -470,18 +504,32 @@ function changeBrightness(v){
 }
 
 // ── 알람 ──
-function triggerAlarm(soundFile){
+// 번들 사운드는 'sounds/'로 시작하는 상대경로 그대로 재생하고, 시스템 사운드는
+// 절대경로(예: C:\Windows\Media\...)로 알람에 저장해두고 재생 직전에 매번 바이트를
+// 읽어와 Blob URL로 변환한다 — Blob URL은 세션마다 새로 만들어야 해서 저장해둔
+// 절대경로를 원본으로 유지해야 재시작 후에도 계속 재생 가능하다(2026-08-02).
+async function resolveSoundSrc(file){
+  if(!file || file.startsWith('sounds/')) return file||'sounds/alarm.wav';
+  try {
+    const bytes = await invoke('read_system_sound', {path:file});
+    const blob = new Blob([new Uint8Array(bytes)], {type:'audio/wav'});
+    return URL.createObjectURL(blob);
+  } catch(e) { return 'sounds/alarm.wav'; }
+}
+async function triggerAlarm(soundFile){
   if(flashTimer) return;
   const cr=document.getElementById('clock-area');
   cr.classList.add('flashing');
-  alarmAudio.src=soundFile||'sounds/alarm.wav';
+  const src = await resolveSoundSrc(soundFile);
+  alarmAudio.src=src;
   alarmAudio.currentTime=0;
   alarmAudio.loop=true;
   alarmAudio.play().catch(()=>{});
   flashTimer=setTimeout(stopAlarm, 30000);
 }
-function previewAlarmSound(file){
-  const p=new Audio(file);
+async function previewAlarmSound(file){
+  const src = await resolveSoundSrc(file);
+  const p=new Audio(src);
   p.volume=0.6;
   p.play().catch(()=>{});
 }

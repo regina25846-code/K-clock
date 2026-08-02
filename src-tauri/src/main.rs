@@ -46,6 +46,48 @@ fn refresh_always_on_top(window: tauri::Window) {
     let _ = window.set_always_on_top(true);
 }
 
+// 2026-08-02: 알람 소리를 앱에 번들하는 대신, 사용자 자신의 윈도우가 이미 갖고 있는
+// 시스템 사운드(C:\Windows\Media 상당 경로)를 그대로 참조하게 해서 저작권 문제를
+// 피하면서 소리 선택지를 늘림 — 파일을 앱에 복사/포함하지 않고 경로만 읽는다.
+// 드라이브 문자를 하드코딩하면 윈도우를 C: 외 다른 드라이브에 설치한 사용자에게
+// 깨지므로, 윈도우가 제공하는 SystemRoot 환경변수로 실제 설치 경로를 물어봄.
+#[tauri::command]
+fn list_system_sounds() -> Vec<serde_json::Value> {
+    let mut sounds = Vec::new();
+    #[cfg(windows)]
+    {
+        let root = std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".to_string());
+        let media_dir = std::path::Path::new(&root).join("Media");
+        if let Ok(entries) = std::fs::read_dir(&media_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                let is_wav = path
+                    .extension()
+                    .map(|e| e.eq_ignore_ascii_case("wav"))
+                    .unwrap_or(false);
+                if is_wav {
+                    if let Some(name) = path.file_stem().and_then(|s| s.to_str()) {
+                        sounds.push(serde_json::json!({
+                            "name": name,
+                            "path": path.to_string_lossy().to_string()
+                        }));
+                    }
+                }
+            }
+        }
+        sounds.sort_by(|a, b| a["name"].as_str().unwrap_or("").cmp(b["name"].as_str().unwrap_or("")));
+    }
+    sounds
+}
+
+// asset protocol의 scope 설정(tauri.conf.json)은 정적 glob이라 드라이브 문자가 바뀌면
+// 대응 못 하는 문제가 똑같이 생겨서, 대신 Rust가 직접 바이트를 읽어 IPC로 넘기고
+// 프런트엔드에서 그때그때 Blob URL로 재생한다(스코프 설정 자체가 불필요해짐).
+#[tauri::command]
+fn read_system_sound(path: String) -> Result<Vec<u8>, String> {
+    std::fs::read(&path).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 fn minimize_window(window: tauri::Window) {
     let _ = window.minimize();
@@ -253,6 +295,8 @@ fn main() {
             close_about,
             check_for_update,
             refresh_always_on_top,
+            list_system_sounds,
+            read_system_sound,
         ])
         .run(tauri::generate_context!())
         .expect("K-Clock 실행 실패");

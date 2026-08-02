@@ -81,6 +81,19 @@ body { background:transparent; font-family:'Segoe UI',sans-serif; overflow:hidde
 .toggle.off { background:#333; }
 select { background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:5px; color:#b8b8b8; padding:3px 6px; font-size:11px; outline:none; cursor:pointer; }
 select option { background:#1e1e1e; color:#b8b8b8; }
+/* 네이티브 select의 옵션 목록은 OS 별도 팝업 창으로 뜨는데, 시계 창이 항상위(topmost)라
+   그 팝업이 시계 창 뒤로 깔려서 선택 자체가 안 되는 문제가 있었음(2026-08-02, 항상위를
+   진짜로 고치고 나서 드러남) — select를 순수 DOM 기반 커스텀 드롭다운으로 교체해서
+   같은 창 안에서만 겹치게 함. */
+.cdd { position:relative; flex-shrink:0; }
+.alarm-sound-row .cdd { width:100%; }
+.cdd-btn { text-align:left; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:5px; color:#b8b8b8; padding:3px 6px; font-size:11px; outline:none; cursor:pointer; font-family:inherit; white-space:nowrap; }
+.alarm-sound-row .cdd-btn { width:100%; }
+.cdd-list { display:none; position:absolute; top:100%; right:0; margin-top:2px; background:#1e1e1e; border:1px solid rgba(255,255,255,0.15); border-radius:5px; min-width:100%; max-height:160px; overflow-y:auto; z-index:50; white-space:nowrap; }
+.alarm-sound-row .cdd-list { left:0; right:0; white-space:normal; }
+.cdd-list.open { display:block; }
+.cdd-item { padding:5px 8px; font-size:11px; color:#b8b8b8; cursor:pointer; }
+.cdd-item:hover { background:rgba(255,255,255,0.1); }
 .color-btn { padding:3px 9px; border:1px solid rgba(255,255,255,0.18); border-radius:4px; font-size:11px; cursor:pointer; background:transparent; color:#b8b8b8; }
 .color-btn.active { border-color:#aaa; background:rgba(255,255,255,0.15); }
 
@@ -114,14 +127,18 @@ select option { background:#1e1e1e; color:#b8b8b8; }
     <div class="panel-title">알람</div>
     <button class="close-panel" onclick="closePanel()">✕</button>
     <div class="alarm-sound-row">
-      <select id="alarm-sound" onchange="previewAlarmSound(this.value)">
-        <option value="sounds/alarm.wav">기본 알림음</option>
-        <option value="sounds/beep.wav">클래식 비프</option>
-        <option value="sounds/chime.wav">차임벨</option>
-        <option value="sounds/gentle.wav">부드러운 알림</option>
-        <option value="sounds/retro.wav">레트로 벨</option>
-        <option value="sounds/pulse.wav">디지털 펄스</option>
-      </select>
+      <div class="cdd" id="sound-dd">
+        <button type="button" class="cdd-btn" id="sound-dd-btn" onclick="toggleDropdown('sound-dd')">기본 알림음</button>
+        <div class="cdd-list">
+          <div class="cdd-item" onclick="pickSound('sounds/alarm.wav','기본 알림음')">기본 알림음</div>
+          <div class="cdd-item" onclick="pickSound('sounds/beep.wav','클래식 비프')">클래식 비프</div>
+          <div class="cdd-item" onclick="pickSound('sounds/chime.wav','차임벨')">차임벨</div>
+          <div class="cdd-item" onclick="pickSound('sounds/gentle.wav','부드러운 알림')">부드러운 알림</div>
+          <div class="cdd-item" onclick="pickSound('sounds/retro.wav','레트로 벨')">레트로 벨</div>
+          <div class="cdd-item" onclick="pickSound('sounds/pulse.wav','디지털 펄스')">디지털 펄스</div>
+        </div>
+      </div>
+      <input type="hidden" id="alarm-sound" value="sounds/alarm.wav">
     </div>
     <div class="alarm-row">
       <input type="time" id="alarm-time" value="07:00">
@@ -159,17 +176,20 @@ select option { background:#1e1e1e; color:#b8b8b8; }
     <div class="setting-row"><span>초 표시</span><div class="toggle" id="tog-sec" onclick="toggleSec()"></div></div>
     <div class="setting-row">
       <span>스타일/폰트</span>
-      <select id="style-select" onchange="changeStyle(this.value)">
-        <option value="7seg">7세그먼트 (영문/숫자)</option>
-        <option value="Inter,Pretendard,sans-serif">Inter + Pretendard</option>
-        <option value="'Malgun Gothic','맑은 고딕',sans-serif">맑은 고딕</option>
-        <option value="Gulim,굴림,sans-serif">굴림</option>
-        <option value="'Nanum Gothic','나눔고딕',sans-serif">나눔고딕</option>
-        <option value="Arial,sans-serif">Arial</option>
-        <option value="'KoPubWorld Dotum Light',sans-serif">KoPubWorld Light</option>
-        <option value="'KoPubWorld Dotum Medium',sans-serif">KoPubWorld Medium</option>
-        <option value="'KoPubWorld Dotum Bold',sans-serif" selected>KoPubWorld Bold</option>
-      </select>
+      <div class="cdd" id="style-dd">
+        <button type="button" class="cdd-btn" id="style-dd-btn" onclick="toggleDropdown('style-dd')">KoPubWorld Bold</button>
+        <div class="cdd-list">
+          <div class="cdd-item" onclick="pickStyle('7seg','7세그먼트 (영문/숫자)')">7세그먼트 (영문/숫자)</div>
+          <div class="cdd-item" onclick="pickStyle('Inter,Pretendard,sans-serif','Inter + Pretendard')">Inter + Pretendard</div>
+          <div class="cdd-item" onclick="pickStyle('&#39;Malgun Gothic&#39;,&#39;맑은 고딕&#39;,sans-serif','맑은 고딕')">맑은 고딕</div>
+          <div class="cdd-item" onclick="pickStyle('Gulim,굴림,sans-serif','굴림')">굴림</div>
+          <div class="cdd-item" onclick="pickStyle('&#39;Nanum Gothic&#39;,&#39;나눔고딕&#39;,sans-serif','나눔고딕')">나눔고딕</div>
+          <div class="cdd-item" onclick="pickStyle('Arial,sans-serif','Arial')">Arial</div>
+          <div class="cdd-item" onclick="pickStyle('&#39;KoPubWorld Dotum Light&#39;,sans-serif','KoPubWorld Light')">KoPubWorld Light</div>
+          <div class="cdd-item" onclick="pickStyle('&#39;KoPubWorld Dotum Medium&#39;,sans-serif','KoPubWorld Medium')">KoPubWorld Medium</div>
+          <div class="cdd-item" onclick="pickStyle('&#39;KoPubWorld Dotum Bold&#39;,sans-serif','KoPubWorld Bold')">KoPubWorld Bold</div>
+        </div>
+      </div>
     </div>
     <div class="setting-row">
       <span>크기</span>
@@ -302,23 +322,28 @@ function clockContentHeight(){
 async function syncWindowWidth(){
   if(syncBusy){ syncPending=true; return; }
   syncBusy=true;
-  do {
-    syncPending=false;
-    const panelEl=document.querySelector('.panel.open');
-    const w=Math.max(clockContentWidth()+14, 200, panelEl?300:0);
-    // 90은 tauri.conf.json의 minHeight와 일치 — 이보다 작게 요청해봐야 네이티브 창은 안 줄어들면서
-    // 요청값 기준 계산만 어긋나므로 의미 없음(폭의 200 하한과 동일한 이유).
-    const h=Math.max(clockContentHeight()+10+(panelEl?panelEl.offsetHeight:0), 90);
-    // 예전엔 패널 열 때 캡처해둔 위치(lockedPos)를 계속 재사용해서, 그 뒤로 창을 옮겼거나
-    // 시간이 지나면 "그때 그 자리"로 되돌아가는 것처럼 보이는 문제가 있었음 —
-    // 매번 지금 실제 위치를 새로 읽어서 그 자리 기준으로만 중심을 맞추도록 변경.
-    const pos=await invoke('get_window_pos');
-    const cx=pos[0]+Math.round(window.innerWidth/2);
-    await invoke('set_window_size',{width:w,height:h});
-    const newX=Math.max(0, cx - Math.round(w/2));
-    await invoke('set_window_pos',{x:newX,y:pos[1]});
-  } while(syncPending);
-  syncBusy=false;
+  try {
+    do {
+      syncPending=false;
+      const panelEl=document.querySelector('.panel.open');
+      const w=Math.max(clockContentWidth()+14, 200, panelEl?300:0);
+      // 90은 tauri.conf.json의 minHeight와 일치 — 이보다 작게 요청해봐야 네이티브 창은 안 줄어들면서
+      // 요청값 기준 계산만 어긋나므로 의미 없음(폭의 200 하한과 동일한 이유).
+      const h=Math.max(clockContentHeight()+10+(panelEl?panelEl.offsetHeight:0), 90);
+      // 예전엔 패널 열 때 캡처해둔 위치(lockedPos)를 계속 재사용해서, 그 뒤로 창을 옮겼거나
+      // 시간이 지나면 "그때 그 자리"로 되돌아가는 것처럼 보이는 문제가 있었음 —
+      // 매번 지금 실제 위치를 새로 읽어서 그 자리 기준으로만 중심을 맞추도록 변경.
+      const pos=await invoke('get_window_pos');
+      const cx=pos[0]+Math.round(window.innerWidth/2);
+      await invoke('set_window_size',{width:w,height:h});
+      const newX=Math.max(0, cx - Math.round(w/2));
+      await invoke('set_window_pos',{x:newX,y:pos[1]});
+    } while(syncPending);
+  } finally {
+    // invoke 중 하나라도 실패하면 syncBusy가 true로 영원히 남아 이후 모든 리사이즈가
+    // 무음으로 무시되는 걸 방지(오푸스 리뷰로 발견)
+    syncBusy=false;
+  }
 }
 
 async function toggleAutostart(){
@@ -375,12 +400,58 @@ function changeStyle(v){
   syncWindowWidth();
 }
 
+// ── 커스텀 드롭다운(네이티브 select 대체) ──
+// 네이티브 select의 옵션 목록은 OS 별도 팝업 창으로 뜨는데, 시계 창이 항상위(topmost)라
+// 그 팝업이 시계 창 뒤로 깔려서 선택 자체가 안 되는 문제가 있었음(2026-08-02) — 순수 DOM
+// 리스트로 대체해서 같은 창 안에서만 겹치게 함.
+function closeAllDropdowns(except){
+  let closedAny=false;
+  document.querySelectorAll('.cdd-list.open').forEach(l=>{ if(l!==except){ l.classList.remove('open'); closedAny=true; } });
+  // 목록 열 때 창을 넓혀줬던 걸 되돌림 — hideMenu()와 같은 패턴으로, 실제로 뭔가 닫혔을 때만
+  // 리사이즈(닫혀있던 상태에서 매 클릭마다 불필요한 리사이즈가 도는 걸 방지)
+  if(closedAny) setTimeout(syncWindowWidth,10);
+}
+function toggleDropdown(id){
+  const list=document.querySelector('#'+id+' .cdd-list');
+  const wasOpen=list.classList.contains('open');
+  closeAllDropdowns();
+  if(wasOpen) return;
+  list.classList.add('open');
+  // 옵션 목록이 패널 아래로 실제 창 높이를 넘어서면 네이티브 창 경계에 그대로 잘려서
+  // (같은 창 안이라 클릭 자체는 되지만) 아래쪽 항목이 안 보이거나 안 눌리게 됨 —
+  // 우클릭 메뉴(#ctx-menu)에서 이미 쓰던 것과 같은 방식으로 필요한 만큼만 창을 늘림.
+  requestAnimationFrame(async ()=>{
+    const rect=list.getBoundingClientRect();
+    const extra=Math.ceil(rect.bottom)-window.innerHeight;
+    if(extra>0){
+      await invoke('set_window_size',{width:window.innerWidth,height:window.innerHeight+extra+4});
+    }
+  });
+}
+function pickStyle(v,label){
+  document.getElementById('style-dd-btn').textContent=label;
+  document.querySelector('#style-dd .cdd-list').classList.remove('open');
+  changeStyle(v);
+}
+function pickSound(v,label){
+  document.getElementById('sound-dd-btn').textContent=label;
+  document.getElementById('alarm-sound').value=v;
+  document.querySelector('#sound-dd .cdd-list').classList.remove('open');
+  previewAlarmSound(v);
+  setTimeout(syncWindowWidth,10);
+}
+document.addEventListener('mousedown',function(e){ if(e.button!==0) return; if(!e.target.closest('.cdd')) closeAllDropdowns(); });
+
 function previewSize(v){
   txtClock.style.fontSize=v+'px';
   const scale=v/40;
   const sw=document.getElementById('seg-wrap');
   sw.style.transform=`scale(${scale})`;
-  sw.style.transformOrigin='center';
+  // origin을 'center'로 두면 확대된 만큼 위로도 삐져나가는데, #clock-area가
+  // flex-start라 위로 넘친 부분은 창 위쪽 바깥으로 잘려서 7세그먼트 상단이 잘려 보임
+  // (오푸스 리뷰로 발견, 2026-08-02). center top으로 바꿔 아래쪽으로만 커지게 해서
+  // clockContentHeight()가 재는 높이 안에 항상 다 들어오게 함.
+  sw.style.transformOrigin='center top';
   document.getElementById('size-val').textContent=v;
 }
 async function changeSize(v){

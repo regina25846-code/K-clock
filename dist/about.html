@@ -83,14 +83,14 @@
         <text x="80" y="84.68" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16.9" font-weight="800" fill="#fff">K</text>
       </svg>
       <div class="appname">K-Clock</div>
-      <div class="version" id="ver">v1.3.8-6</div>
+      <div class="version" id="ver">v1.3.8-7</div>
       <div class="divider"></div>
       <div class="desc">시스템 트레이 상주형 시계<br>알람 · 카운트다운 · 타이머 지원</div>
       <div class="copy">© 2026 KrisB. All rights reserved.</div>
     </div>
     <div class="actions">
-      <button class="update-btn" disabled>업데이트 확인</button>
-      <span class="update-status">최신 버전 사용 중</span>
+      <button class="update-btn" id="update-btn" onclick="checkForUpdate()">업데이트 확인</button>
+      <span class="update-status" id="update-status"></span>
     </div>
   </div>
 </div>
@@ -102,13 +102,40 @@
   // 실제 윈도우 폰트/DPI에 따라 카드의 실제 렌더링 높이가 달라질 수 있어서(맥 프리뷰 렌더링과
   // 실제 Windows 렌더링 사이 오차가 있었음), 고정값으로 창 크기를 추측하는 대신 로드 직후
   // 실제 렌더링된 높이를 측정해서 창 크기를 거기에 정확히 맞춘다 — 이후 폰트가 달라져도 항상 안전.
-  window.addEventListener('load', async () => {
+  // 업데이트 상태 텍스트가 바뀌면 카드 높이도 바뀌므로 그때마다 다시 호출한다.
+  async function syncAboutHeight() {
     if (!window.__TAURI__) return;
     const h = Math.ceil(document.querySelector('.dialog').getBoundingClientRect().height) + 4;
     try {
       await window.__TAURI__.core.invoke('set_window_size', { width: 340, height: h });
     } catch (e) {}
-  });
+  }
+  window.addEventListener('load', syncAboutHeight);
+
+  // 이전엔 버튼이 disabled + "최신 버전 사용 중"이 고정 텍스트로 박혀있어서 눌러도 아무 일도
+  // 안 일어났음 — 실제로 check_for_update를 호출해서 확인 중/결과를 보여주도록 교체.
+  async function checkForUpdate() {
+    const btn = document.getElementById('update-btn');
+    const status = document.getElementById('update-status');
+    if (!window.__TAURI__) { status.textContent = '개발 모드에서는 확인할 수 없습니다'; return; }
+    btn.disabled = true;
+    status.textContent = '확인 중...';
+    await syncAboutHeight();
+    try {
+      const version = await window.__TAURI__.core.invoke('check_for_update');
+      if (version) {
+        status.textContent = `새 버전(v${version}) 설치 중, 곧 재시작됩니다...`;
+      } else {
+        status.textContent = '최신 버전입니다';
+        btn.disabled = false;
+      }
+    } catch (e) {
+      console.error('[K-Clock] 업데이트 확인 실패:', e);
+      status.textContent = '확인 실패, 잠시 후 다시 시도해주세요';
+      btn.disabled = false;
+    }
+    await syncAboutHeight();
+  }
 
   async function closeAbout() {
     if (window.__TAURI__) {

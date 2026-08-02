@@ -103,6 +103,29 @@ fn open_about(app: tauri::AppHandle) {
     .map(|win| { let _ = win.center(); });
 }
 
+// 프로그램 정보 창의 "업데이트 확인" 버튼이 실제로 호출하는 명령 — 이전엔 시작 시 조용히
+// 한 번 백그라운드 체크만 하고(update-available 이벤트도 프론트에서 아무도 안 들어서
+// 무용지물이었음) 버튼 자체는 disabled + 고정 텍스트라 눌러도 아무 일도 안 일어났음.
+// 업데이트를 찾으면 바로 다운로드+설치까지 진행하고 재시작(Windows는 설치 단계에서
+// 앱이 자동 종료됨 — Tauri 공식 문서에 명시된 동작).
+#[tauri::command]
+async fn check_for_update(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    let updater = app.updater().map_err(|e| e.to_string())?;
+    let update = updater.check().await.map_err(|e| e.to_string())?;
+    match update {
+        Some(update) => {
+            let version = update.version.clone();
+            update
+                .download_and_install(|_, _| {}, || {})
+                .await
+                .map_err(|e| e.to_string())?;
+            app.restart();
+            Ok(Some(version))
+        }
+        None => Ok(None),
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_window_state::Builder::default()
@@ -195,6 +218,7 @@ fn main() {
             get_autostart,
             open_about,
             close_about,
+            check_for_update,
         ])
         .run(tauri::generate_context!())
         .expect("K-Clock 실행 실패");

@@ -69,8 +69,11 @@ fn list_system_sounds() -> Vec<serde_json::Value> {
                     if let Some(name) = path.file_stem().and_then(|s| s.to_str()) {
                         // 알람으로 쓰기 적당한 "또렷한" 계열만 남김 — 전체 목록은 너무
                         // 잡다해서 형이 알람/링 계열만 남기라고 지정함(2026-08-02).
+                        // ringin/ringout(통화 연결음 계열)은 "ring"에 걸려 같이 들어왔었는데
+                        // 알람용으로 안 맞아서 형이 제외 요청함(2026-08-02).
                         let lower = name.to_lowercase();
-                        if lower.contains("alarm") || lower.contains("ring") {
+                        let is_ring_call = lower.contains("ringin") || lower.contains("ringout");
+                        if (lower.contains("alarm") || lower.contains("ring")) && !is_ring_call {
                             sounds.push(serde_json::json!({
                                 "name": name,
                                 "path": path.to_string_lossy().to_string()

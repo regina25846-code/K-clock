@@ -395,6 +395,11 @@ function changeStyle(v){
   const seg=document.getElementById('seg-wrap');
   if(v==='7seg'){ seg.style.display='flex'; txtClock.style.display='none'; }
   else { seg.style.display='none'; txtClock.style.display='block'; txtClock.style.fontFamily=v; }
+  // previewSize()의 min-height 보정은 크기 슬라이더를 조작할 때만 실행돼서, 슬라이더는
+  // 안 건드리고 스타일만 바꾸면(예: 텍스트→7세그먼트) 예약 공간이 갱신 안 돼 여전히
+  // 패널과 겹쳐 보였음(형이 실제 기기에서 재현, 2026-08-02) — 스타일 전환 시에도
+  // 현재 크기값 기준으로 다시 계산해준다.
+  previewSize(document.getElementById('size-slider').value);
   syncWindowWidth();
 }
 

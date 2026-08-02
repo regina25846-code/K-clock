@@ -183,17 +183,7 @@ select option { background:#1e1e1e; color:#b8b8b8; }
       <span>스타일/폰트</span>
       <div class="cdd" id="style-dd">
         <button type="button" class="cdd-btn" id="style-dd-btn" onclick="toggleDropdown('style-dd')">KoPubWorld Bold</button>
-        <div class="cdd-list">
-          <div class="cdd-item" onclick="pickStyle('7seg','7세그먼트 (영문/숫자)')">7세그먼트 (영문/숫자)</div>
-          <div class="cdd-item" onclick="pickStyle('Inter,Pretendard,sans-serif','Inter + Pretendard')">Inter + Pretendard</div>
-          <div class="cdd-item" onclick="pickStyle('&#39;Malgun Gothic&#39;,&#39;맑은 고딕&#39;,sans-serif','맑은 고딕')">맑은 고딕</div>
-          <div class="cdd-item" onclick="pickStyle('Gulim,굴림,sans-serif','굴림')">굴림</div>
-          <div class="cdd-item" onclick="pickStyle('&#39;Nanum Gothic&#39;,&#39;나눔고딕&#39;,sans-serif','나눔고딕')">나눔고딕</div>
-          <div class="cdd-item" onclick="pickStyle('Arial,sans-serif','Arial')">Arial</div>
-          <div class="cdd-item" onclick="pickStyle('&#39;KoPubWorld Dotum Light&#39;,sans-serif','KoPubWorld Light')">KoPubWorld Light</div>
-          <div class="cdd-item" onclick="pickStyle('&#39;KoPubWorld Dotum Medium&#39;,sans-serif','KoPubWorld Medium')">KoPubWorld Medium</div>
-          <div class="cdd-item" onclick="pickStyle('&#39;KoPubWorld Dotum Bold&#39;,sans-serif','KoPubWorld Bold')">KoPubWorld Bold</div>
-        </div>
+        <div class="cdd-list" id="style-dd-list"></div>
       </div>
     </div>
     <div class="setting-row">
@@ -438,6 +428,31 @@ function pickStyle(v,label){
   document.querySelector('#style-dd .cdd-list').classList.remove('open');
   changeStyle(v);
 }
+// 폰트 이름에 공백이 있어서 CSS font-family 값 자체에 작은따옴표가 필요한 항목들
+// (맑은 고딕/나눔고딕/KoPubWorld 등)을 정적 HTML onclick 문자열 안에 &#39;로 직접
+// 넣었었는데, JS 문자열 델리미터랑 겹쳐서 문법 오류가 나 클릭해도 아무 반응이 없던
+// 버그였음(형이 발견, 2026-08-02) — JS 배열로 옮겨서 이스케이핑 문제 자체를 없앰.
+const STYLE_OPTIONS=[
+  ['7seg','7세그먼트 (영문/숫자)'],
+  ['Inter,Pretendard,sans-serif','Inter + Pretendard'],
+  ["'Malgun Gothic','맑은 고딕',sans-serif",'맑은 고딕'],
+  ['Gulim,굴림,sans-serif','굴림'],
+  ["'Nanum Gothic','나눔고딕',sans-serif",'나눔고딕'],
+  ['Arial,sans-serif','Arial'],
+  ["'KoPubWorld Dotum Light',sans-serif",'KoPubWorld Light'],
+  ["'KoPubWorld Dotum Medium',sans-serif",'KoPubWorld Medium'],
+  ["'KoPubWorld Dotum Bold',sans-serif",'KoPubWorld Bold'],
+];
+(function buildStyleDropdown(){
+  const container=document.getElementById('style-dd-list');
+  STYLE_OPTIONS.forEach(([v,label])=>{
+    const item=document.createElement('div');
+    item.className='cdd-item';
+    item.textContent=label;
+    item.addEventListener('click',()=>pickStyle(v,label));
+    container.appendChild(item);
+  });
+})();
 function pickSound(v,label,silent){
   document.getElementById('sound-dd-btn').textContent=label;
   document.getElementById('alarm-sound').value=v;

@@ -333,9 +333,11 @@ async function syncWindowWidth(){
       // 매번 지금 실제 위치를 새로 읽어서 그 자리 기준으로만 중심을 맞추도록 변경.
       const pos=await invoke('get_window_pos');
       const cx=pos[0]+Math.round(window.innerWidth/2);
-      await invoke('set_window_size',{width:w,height:h});
       const newX=Math.max(0, cx - Math.round(w/2));
-      await invoke('set_window_pos',{x:newX,y:pos[1]});
+      // 크기(set_window_size)와 위치(set_window_pos)를 따로 왕복하면 그 사이에 프레임이
+      // 끼어들어 "커졌다가 옮겨지는" 2단계 움직임이 떨림으로 보였음(2026-08-02) —
+      // 한 커맨드(set_window_rect)로 합쳐서 왕복을 줄임.
+      await invoke('set_window_rect',{x:newX,y:pos[1],width:w,height:h});
     } while(syncPending);
   } finally {
     // invoke 중 하나라도 실패하면 syncBusy가 true로 영원히 남아 이후 모든 리사이즈가
@@ -526,7 +528,10 @@ function changeBrightness(v){
   const c='#'+hex+hex+hex;
   document.getElementById('seg-wrap').querySelectorAll('.seg,.dot').forEach(s=>s.style.background=c);
   txtClock.style.color=c;
-  document.querySelectorAll('.panel-title,.setting-row span,.alarm-item,.empty-msg,#cd-display,.cd-btns button,.alarm-row input,.btn-add,.cd-row input,.cd-row span,#alarm-sound').forEach(el=>el.style.color=c);
+  // .cdd-btn/.cdd-item(스타일·알람소리 드롭다운)은 select를 대체한 뒤 이 목록에
+  // 추가가 안 돼서 밝기를 낮춰도 옆의 라벨만 어두워지고 버튼은 그대로 밝은 회색으로
+  // 남아 색이 어긋나 보였음(오푸스 리뷰로 발견, 2026-08-02).
+  document.querySelectorAll('.panel-title,.setting-row span,.alarm-item,.empty-msg,#cd-display,.cd-btns button,.alarm-row input,.btn-add,.cd-row input,.cd-row span,#alarm-sound,.cdd-btn,.cdd-item').forEach(el=>el.style.color=c);
   document.querySelectorAll('.close-panel').forEach(el=>el.style.color=c+'88');
 }
 

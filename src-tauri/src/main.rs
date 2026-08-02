@@ -145,6 +145,19 @@ fn set_window_size(window: tauri::Window, width: u32, height: u32) {
     let _ = window.set_resizable(false);
 }
 
+// syncWindowWidth()가 예전엔 get_window_pos → set_window_size → set_window_pos 순으로
+// IPC 왕복을 3번 했는데, 크기 변경과 위치 변경 사이에 프레임이 끼어들면서 "창이 커졌다가
+// 다시 중앙으로 옮겨지는" 2단계 움직임이 눈에 보이는 떨림으로 나타났음(형이 스타일 전환 시
+// 발견, 2026-08-02, 오푸스 리뷰로 원인 규명). 크기+위치를 한 Rust 커맨드 안에서 연달아
+// 적용해서 왕복 횟수를 줄이고 두 변경 사이 화면 갱신 여지를 최소화함.
+#[tauri::command]
+fn set_window_rect(window: tauri::Window, x: i32, y: i32, width: u32, height: u32) {
+    let _ = window.set_resizable(true);
+    let _ = window.set_size(tauri::Size::Logical(tauri::LogicalSize { width: width as f64, height: height as f64 }));
+    let _ = window.set_position(tauri::Position::Logical(tauri::LogicalPosition { x: x as f64, y: y as f64 }));
+    let _ = window.set_resizable(false);
+}
+
 #[tauri::command]
 fn set_autostart(app: tauri::AppHandle, enabled: bool) {
     let mgr = app.autolaunch();
@@ -294,6 +307,7 @@ fn main() {
             hide_window,
             set_window_height,
             set_window_size,
+            set_window_rect,
             get_window_pos,
             set_window_pos,
             start_dragging,

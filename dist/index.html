@@ -232,7 +232,6 @@ const alarms=[];
 let flashTimer=null;
 let repeatMode=false;
 let sizeDebounce=null;
-let lockedPos=null;
 function toggleRepeatBtn(){
   repeatMode=!repeatMode;
   document.getElementById('btn-repeat').classList.toggle('active',repeatMode);
@@ -296,11 +295,14 @@ async function syncWindowWidth(){
   const panelOpen=!!document.querySelector('.panel.open');
   const w=Math.max(clockContentWidth()+40, 80, panelOpen?300:0);
   const h=document.getElementById('clock-area').offsetHeight;
+  // 예전엔 패널 열 때 캡처해둔 위치(lockedPos)를 계속 재사용해서, 그 뒤로 창을 옮겼거나
+  // 시간이 지나면 "그때 그 자리"로 되돌아가는 것처럼 보이는 문제가 있었음 —
+  // 매번 지금 실제 위치를 새로 읽어서 그 자리 기준으로만 중심을 맞추도록 변경.
+  const pos=await invoke('get_window_pos');
+  const cx=pos[0]+Math.round(window.innerWidth/2);
   await invoke('set_window_size',{width:w,height:h});
-  if(lockedPos){
-    const newX=Math.max(0, lockedPos.cx - Math.round(w/2));
-    await invoke('set_window_pos',{x:newX,y:lockedPos.y});
-  }
+  const newX=Math.max(0, cx - Math.round(w/2));
+  await invoke('set_window_pos',{x:newX,y:pos[1]});
 }
 
 async function toggleAutostart(){
@@ -326,20 +328,15 @@ setInterval(()=>{
   }
 },500);
 
-async function openPanel(name){
+function openPanel(name){
   hideMenu();
-  if(!lockedPos){
-    const pos=await invoke('get_window_pos');
-    const cx=pos[0]+Math.round(window.innerWidth/2);
-    lockedPos={x:pos[0],y:pos[1],cx:cx};
-  }
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('open'));
   document.getElementById('panel-'+name).classList.add('open');
   setTimeout(()=>{ adjustHeight(); syncWindowWidth(); },10);
 }
 function closePanel(){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('open'));
-  setTimeout(()=>{ adjustHeight(); syncWindowWidth(); lockedPos=null; },10);
+  setTimeout(()=>{ adjustHeight(); syncWindowWidth(); },10);
 }
 
 function closeInfo(){

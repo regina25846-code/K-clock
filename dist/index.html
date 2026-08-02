@@ -523,9 +523,17 @@ async function triggerAlarm(soundFile){
   alarmAudio.play().catch(()=>{});
   flashTimer=setTimeout(stopAlarm, 30000);
 }
+let previewAudioEl=null, previewToken=0;
 async function previewAlarmSound(file){
+  // 매번 new Audio()로 새 인스턴스를 만들어서 이전에 재생중이던 미리듣기가
+  // 안 멈추고 겹쳐 들리던 문제 — 재생중인걸 즉시 멈추고, 비동기 경로 변환(resolveSoundSrc)
+  // 도중에 또 다른 소리를 눌렀으면 먼저 것의 결과는 버린다(순서 역전 방지, 2026-08-02).
+  const myToken=++previewToken;
+  if(previewAudioEl){ previewAudioEl.pause(); }
   const src = await resolveSoundSrc(file);
+  if(myToken!==previewToken) return;
   const p=new Audio(src);
+  previewAudioEl=p;
   p.volume=0.6;
   p.play().catch(()=>{});
 }

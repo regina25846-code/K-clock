@@ -1,84 +1,843 @@
 {
   "spec": "K-Clock 카운트다운 커스텀 프리셋",
+  "version": "v2 — 드래그 재정렬 + 시간·이름 수정",
   "date": "2026-08-21",
   "mock": "design/countdown_preset_mock.html",
   "target": "dist/index.html",
-  "note": "check_*.py 계열 기계 대조 스크립트의 입력. css 항목은 getComputedStyle 대조, layout은 getBoundingClientRect 대조, behavior는 headless(playwright)에서 스텝 실행 후 assert.",
-
+  "baseline": "v1은 v1.3.9-2로 배포 완료. 이 문서의 v1 항목은 전부 '이미 구현되어 있고 깨지면 안 되는 것'이고, v2 항목만 신규 구현 대상이다.",
+  "note": "check_*.py 계열 기계 대조 스크립트의 입력. css 항목은 getComputedStyle 대조, css_unchanged는 소스 문자열 완전일치, dom/layout/behavior는 렌더 후 평가. 기대값은 전부 시안을 Chromium으로 실제 렌더/조작해서 뽑은 실측값(근사치 아님).",
+  "v2_summary": {
+    "req1": "4칸을 마우스로 끌어 순서 변경 + 다른 칸이 비켜주는 애니메이션. 알람 목록의 기존 드래그 정렬을 가로 방향으로 옮긴 것(새 방식 도입 아님).",
+    "req2": "삭제 없이 시간(+이름) 수정. 칸 호버 시 왼쪽에 연필 아이콘 노출(오른쪽 삭제 ✕의 거울상) → 시간은 위쪽 시/분/초 입력칸에서, 이름은 칸 안 인라인 입력에서 고치고 저장.",
+    "root_cause_req2": "v1에도 덮어쓰기 경로는 있었으나(꽉 찬 상태에서 저장 → pick 모드 → 칸 클릭) 진입점이 보이지 않았고, writeCdPreset이 이름을 빈 값으로 리셋해서 '수정'이 아니라 '지우고 다시 만들기'로 느껴졌다. v2는 진입점을 보이게 만들고 이름을 보존한다."
+  },
   "css": [
-    { "sel": ".cd-save-btn", "props": { "width": "36px", "padding": "5px 0px", "background-color": "rgba(255, 255, 255, 0.1)", "color": "rgb(184, 184, 184)", "border": "1px solid rgba(255, 255, 255, 0.15)", "border-radius": "5px", "font-size": "11px", "cursor": "pointer" }, "why": "알람 .btn-add와 동일 스펙 재사용" },
-    { "sel": ".cd-save-btn.picking", "props": { "color": "rgb(201, 163, 92)", "border-color": "rgb(201, 163, 92)" }, "why": "#c9a35c(금색) — 형이 초록(기존 on/active 강조색과 동일)이 촌스럽다고 지적해서 프리셋 전용 색으로 분리(2026-08-21). 기존 .btn-repeat.active/.alarm-toggle.on의 초록은 그대로 유지, 이 프리셋 선택 강조색만 별도 톤" },
-    { "sel": ".cd-save-btn:disabled", "props": { "opacity": "0.35" } },
-
-    { "sel": ".cd-preset-sec", "props": { "margin-top": "8px", "padding-top": "8px", "border-top": "1px solid rgba(255, 255, 255, 0.08)" }, "why": "구분선은 .alarm-item / .setting-row와 동일 토큰" },
-    { "sel": ".cd-preset-sec.disabled", "props": { "opacity": "0.4", "pointer-events": "none" } },
-    { "sel": ".cd-preset-row", "props": { "display": "flex", "gap": "5px" }, "why": ".cd-btns의 gap:5px 재사용" },
-
-    { "sel": ".cd-preset", "props": { "height": "38px", "padding": "0px 2px", "background-color": "rgba(255, 255, 255, 0.08)", "border": "1px solid rgba(255, 255, 255, 0.15)", "border-radius": "5px", "color": "rgb(184, 184, 184)", "flex-grow": "1", "min-width": "0px", "overflow": "hidden", "cursor": "pointer" } },
-    { "sel": ".cd-preset:hover", "props": { "background-color": "rgba(255, 255, 255, 0.14)" } },
-    { "sel": ".cd-preset .p-time", "props": { "font-size": "12px", "font-family": "'Consolas', monospace", "white-space": "nowrap", "overflow": "hidden" }, "why": "#cd-display와 같은 Consolas 계열" },
-    { "sel": ".cd-preset .p-name", "props": { "font-size": "9px", "color": "rgba(184, 184, 184, 0.6)", "text-overflow": "ellipsis", "white-space": "nowrap", "overflow": "hidden" } },
-    { "sel": ".cd-preset.empty", "props": { "background-color": "rgba(255, 255, 255, 0.03)", "border-style": "dashed", "border-color": "rgba(255, 255, 255, 0.15)", "color": "rgba(255, 255, 255, 0.25)", "font-size": "14px" } },
-    { "sel": ".cd-preset.pick", "props": { "border-color": "rgb(201, 163, 92)", "color": "rgb(201, 163, 92)" } },
-
-    { "sel": ".cd-preset-del", "props": { "position": "absolute", "color": "rgba(255, 80, 80, 0.6)", "font-size": "10px", "opacity": "0" }, "why": "색은 .alarm-del과 동일" },
-    { "sel": ".cd-preset:hover .cd-preset-del", "props": { "opacity": "1" } },
-    { "sel": ".cd-preset input[type=text]", "props": { "width": "100%", "font-size": "10px", "text-align": "center", "background-color": "rgba(255, 255, 255, 0.08)", "border": "1px solid rgba(255, 255, 255, 0.15)", "border-radius": "4px", "color": "rgb(184, 184, 184)" } },
-
-    { "sel": ".cd-hint", "props": { "font-size": "10px", "color": "rgb(119, 119, 119)", "text-align": "center", "margin-top": "6px", "height": "12px" }, "why": "#777은 .empty-msg와 동일" },
-    { "sel": ".cd-hint.picking", "props": { "color": "rgb(201, 163, 92)" } }
+    {
+      "sel": ".cd-save-btn",
+      "props": {
+        "width": "36px",
+        "padding": "5px 0px",
+        "background-color": "rgba(255, 255, 255, 0.1)",
+        "color": "rgb(184, 184, 184)",
+        "border": "1px solid rgba(255, 255, 255, 0.15)",
+        "border-radius": "5px",
+        "font-size": "11px",
+        "cursor": "pointer"
+      },
+      "why": "알람 .btn-add와 동일 스펙 재사용",
+      "v": 1
+    },
+    {
+      "sel": ".cd-save-btn.picking",
+      "props": {
+        "color": "rgb(201, 163, 92)",
+        "border-color": "rgb(201, 163, 92)"
+      },
+      "why": "#c9a35c(금색) — 형이 초록(기존 on/active 강조색과 동일)이 촌스럽다고 지적해서 프리셋 전용 색으로 분리(2026-08-21). 기존 .btn-repeat.active/.alarm-toggle.on의 초록은 그대로 유지, 이 프리셋 선택 강조색만 별도 톤",
+      "v": 1
+    },
+    {
+      "sel": ".cd-save-btn.editing",
+      "props": {
+        "color": "rgb(201, 163, 92)",
+        "border-color": "rgb(201, 163, 92)"
+      },
+      "why": "v2 신규. pick과 같은 금색 — 둘 다 '지금 이 버튼이 특수 모드다'라는 같은 의미라 색을 나누지 않았다. 두 모드는 동시에 켜질 수 없으므로 충돌 없음",
+      "v": 2
+    },
+    {
+      "sel": ".cd-preset-sec",
+      "props": {
+        "margin-top": "8px",
+        "padding-top": "8px",
+        "border-top": "1px solid rgba(255, 255, 255, 0.08)"
+      },
+      "why": "구분선은 .alarm-item / .setting-row와 동일",
+      "v": 1
+    },
+    {
+      "sel": ".cd-preset-row",
+      "props": {
+        "display": "flex",
+        "gap": "5px"
+      },
+      "why": "gap 5px는 드래그 계산식(itemW = offsetWidth + 5)의 입력값이라 바뀌면 재정렬 거리 계산이 어긋난다",
+      "v": 1,
+      "critical": true
+    },
+    {
+      "sel": ".cd-preset",
+      "props": {
+        "height": "38px",
+        "position": "relative",
+        "display": "flex",
+        "flex-direction": "column",
+        "align-items": "center",
+        "justify-content": "center",
+        "gap": "1px",
+        "padding": "0px 2px",
+        "background-color": "rgba(255, 255, 255, 0.08)",
+        "border": "1px solid rgba(255, 255, 255, 0.15)",
+        "border-radius": "5px",
+        "color": "rgb(184, 184, 184)",
+        "cursor": "pointer",
+        "overflow": "hidden"
+      },
+      "why": "칩 1개 = (300 - 28패딩 - 15갭)/4 = 64.25px. padding 0 2px는 최장값 '23:59:59'가 내용폭 안에 들어가는 상한(3px면 1.4px 넘침, 실측). position:relative는 v2의 연필/삭제 절대배치와 .dragging의 z-index가 기대는 기준이라 유지 필수",
+      "v": 1,
+      "critical": true
+    },
+    {
+      "sel": ".cd-preset .p-time",
+      "props": {
+        "font-size": "12px",
+        "font-family": "Consolas, monospace",
+        "line-height": "13.2px",
+        "white-space": "nowrap"
+      },
+      "v": 1
+    },
+    {
+      "sel": ".cd-preset .p-name",
+      "props": {
+        "font-size": "9px",
+        "color": "rgba(184, 184, 184, 0.6)",
+        "text-overflow": "ellipsis",
+        "white-space": "nowrap"
+      },
+      "v": 1
+    },
+    {
+      "sel": ".cd-preset.empty",
+      "props": {
+        "background-color": "rgba(255, 255, 255, 0.03)",
+        "border": "1px dashed rgba(255, 255, 255, 0.15)",
+        "color": "rgba(255, 255, 255, 0.25)",
+        "font-size": "14px"
+      },
+      "v": 1
+    },
+    {
+      "sel": ".cd-preset.pick",
+      "props": {
+        "border-color": "rgb(201, 163, 92)",
+        "color": "rgb(201, 163, 92)"
+      },
+      "v": 1
+    },
+    {
+      "sel": ".cd-preset-del",
+      "props": {
+        "position": "absolute",
+        "top": "0px",
+        "right": "1px",
+        "color": "rgba(255, 80, 80, 0.6)",
+        "font-size": "10px",
+        "line-height": "10px",
+        "padding": "1px 2px",
+        "opacity": "0"
+      },
+      "why": "색은 .alarm-del과 동일. 평소 숨김 → 호버 시 노출",
+      "v": 1
+    },
+    {
+      "sel": ".cd-preset:hover .cd-preset-del",
+      "props": {
+        "opacity": "1"
+      },
+      "v": 1
+    },
+    {
+      "sel": ".cd-preset-edit",
+      "props": {
+        "position": "absolute",
+        "top": "0px",
+        "left": "1px",
+        "color": "rgba(184, 184, 184, 0.5)",
+        "line-height": "10px",
+        "padding": "1px 2px",
+        "opacity": "0",
+        "display": "flex",
+        "align-items": "center",
+        "font-size": "10px"
+      },
+      "why": "v2 신규. 삭제 ✕의 정확한 거울상(top:0 / 반대쪽 모서리 1px / 평소 opacity 0 → 호버 노출). 색만 다르다 — ✕는 파괴적이라 빨강(rgba(255,80,80,0.6)), 연필은 비파괴적이라 .close-panel과 같은 rgba(184,184,184,0.5). 좁은 38px 칸에 새 레이아웃을 만들지 않고 이미 있던 '호버 모서리 버튼' 관례를 그대로 재사용한 것이 핵심. font-size 10px는 .cd-preset-del과 동일 — 버튼은 font-size를 상속하지 않아 명시하지 않으면 UA 기본값(13.3333px)이 잡혀 line-height가 삐뚤어진다",
+      "v": 2
+    },
+    {
+      "sel": ".cd-preset:hover .cd-preset-edit",
+      "props": {
+        "opacity": "1"
+      },
+      "v": 2
+    },
+    {
+      "sel": ".cd-preset.editing",
+      "props": {
+        "border-color": "rgb(201, 163, 92)",
+        "color": "rgb(201, 163, 92)"
+      },
+      "why": "v2 신규. .pick과 같은 금색 — '지금 이 칸이 대상'이라는 같은 의미",
+      "v": 2
+    },
+    {
+      "sel": ".cd-preset.dragging",
+      "props": {
+        "z-index": "5",
+        "cursor": "grabbing",
+        "background-color": "rgba(255, 255, 255, 0.14)",
+        "box-shadow": "rgba(0, 0, 0, 0.4) 0px 2px 8px 0px"
+      },
+      "why": "v2 신규. 알람의 .alarm-item.dragging(z-index:5 / cursor:grabbing / 배경 강조 / box-shadow 0 2px 8px rgba(0,0,0,0.4))과 같은 '떠오른' 표현. .cd-preset이 이미 position:relative와 border-radius:5px를 갖고 있어 그 두 줄은 생략",
+      "v": 2
+    },
+    {
+      "sel": ".cd-preset input[type=text]",
+      "props": {
+        "width": "58.25px",
+        "background-color": "rgba(255, 255, 255, 0.08)",
+        "border-radius": "4px",
+        "color": "rgb(184, 184, 184)",
+        "padding": "2px 3px",
+        "font-size": "10px",
+        "text-align": "center"
+      },
+      "why": "이름 입력(저장 직후)과 v2 수정 모드가 같은 입력칸을 공유. width는 선언값 100%가 칸 안에서 해석된 값 — 64.25px(칸) - 2px(테두리) - 4px(좌우 패딩) = 58.25px",
+      "v": 1
+    },
+    {
+      "sel": ".cd-hint",
+      "props": {
+        "font-size": "10px",
+        "color": "rgb(184, 184, 184)",
+        "text-align": "center",
+        "margin-top": "6px",
+        "height": "12px",
+        "line-height": "12px"
+      },
+      "why": "v1은 #777이었으나 실기에서 너무 어두워 안 보인다고 형이 지적 → 본문색 #b8b8b8로 상향(2026-08-21, 이 값이 현재 dist 기준)",
+      "v": 2
+    },
+    {
+      "sel": ".cd-hint.picking",
+      "props": {
+        "color": "rgb(201, 163, 92)"
+      },
+      "why": "pick / naming / editing 세 모드가 모두 이 금색 힌트를 공유",
+      "v": 1
+    }
   ],
-
   "css_unchanged": {
     "why": "기존 규칙은 한 글자도 바뀌면 안 됨(회귀 방지). 문자열 완전일치로 대조.",
-    "selectors": [".panel", ".panel-title", ".close-panel", ".cd-row", ".cd-row input[type=number]", ".cd-row span", "#cd-display", ".cd-btns", ".cd-btns button", ".alarm-item", ".alarm-del", ".btn-add", ".empty-msg", ".setting-row", ".toggle"]
+    "selectors": [
+      ".panel",
+      ".panel-title",
+      ".close-panel",
+      ".cd-row",
+      ".cd-row input[type=number]",
+      ".cd-row span",
+      "#cd-display",
+      ".cd-btns",
+      ".cd-btns button",
+      ".alarm-item",
+      ".alarm-item.dragging",
+      ".alarm-del",
+      ".alarm-edit-btn",
+      ".btn-add",
+      ".empty-msg",
+      ".setting-row",
+      ".toggle"
+    ]
   },
-
   "dom": [
-    { "id": "dom-1", "assert": "#panel-countdown 안에 .cd-row > #cd-h, #cd-m, #cd-s 3개 유지", "type": "count", "sel": "#panel-countdown .cd-row input[type=number]", "expect": 3 },
-    { "id": "dom-2", "assert": "저장 버튼이 .cd-row의 마지막 자식", "type": "js", "expr": "document.querySelector('#panel-countdown .cd-row').lastElementChild.id === 'cd-save-btn'", "expect": true },
-    { "id": "dom-3", "assert": "#cd-display / .cd-btns 3버튼 그대로", "type": "js", "expr": "document.querySelectorAll('#panel-countdown .cd-btns button').length === 3 && !!document.getElementById('cd-display')", "expect": true },
-    { "id": "dom-4", "assert": "패널 자식 순서 = panel-title → close-panel → cd-row → cd-display → cd-btns → cd-preset-sec (기존 3요소 순서 불변, 프리셋은 맨 아래 추가)", "type": "js", "expr": "[...document.getElementById('panel-countdown').children].map(e=>e.id||e.className.split(' ')[0]).join('>')", "expect": "panel-title>close-panel>cd-row>cd-display>cd-btns>cd-preset-sec" },
-    { "id": "dom-5", "assert": "프리셋 칩은 항상 정확히 4개(빈 슬롯 포함)", "type": "count", "sel": "#cd-preset-row > .cd-preset", "expect": 4 },
-    { "id": "dom-6", "assert": "힌트 줄 1개 존재", "type": "count", "sel": "#cd-hint", "expect": 1 },
-    { "id": "dom-7", "assert": "이름 입력 maxlength=10", "type": "js", "expr": "(()=>{writeCdPreset(0);const i=document.querySelector('.cd-preset input[type=text]');return i.maxLength===10})()", "expect": true, "setup": "cd-m=1" }
+    {
+      "id": "dom-1",
+      "assert": "#panel-countdown 안에 .cd-row > #cd-h, #cd-m, #cd-s 3개 유지",
+      "type": "count",
+      "sel": "#panel-countdown .cd-row input[type=number]",
+      "expect": 3
+    },
+    {
+      "id": "dom-2",
+      "assert": "프리셋 칸은 항상 4개(빈 칸 포함, 배열 길이 고정)",
+      "type": "count",
+      "sel": "#cd-preset-row .cd-preset",
+      "expect": 4
+    },
+    {
+      "id": "dom-3",
+      "assert": "채워진 칸에는 .p-time과 삭제 ✕가 있다",
+      "type": "expr",
+      "expr": "(e=>!!e.querySelector('.p-time')&&!!e.querySelector('.cd-preset-del'))(document.querySelector('#cd-preset-row .cd-preset:not(.empty)'))",
+      "expect": true
+    },
+    {
+      "id": "dom-4",
+      "assert": "빈 칸은 .empty이고 텍스트는 '+'",
+      "type": "expr",
+      "expr": "(e=>e.classList.contains('empty')&&e.textContent==='+')(document.querySelectorAll('#cd-preset-row .cd-preset')[3])",
+      "expect": true
+    },
+    {
+      "id": "dom-5",
+      "assert": "v2: 채워진 칸에 연필 버튼 .cd-preset-edit이 1개 있다",
+      "type": "expr",
+      "expr": "document.querySelectorAll('#cd-preset-row .cd-preset:not(.empty) .cd-preset-edit').length === document.querySelectorAll('#cd-preset-row .cd-preset:not(.empty)').length",
+      "expect": true,
+      "v": 2
+    },
+    {
+      "id": "dom-6",
+      "assert": "v2: 빈 칸에는 연필/삭제 버튼이 없다",
+      "type": "count",
+      "sel": "#cd-preset-row .cd-preset.empty .cd-preset-edit, #cd-preset-row .cd-preset.empty .cd-preset-del",
+      "expect": 0,
+      "v": 2
+    },
+    {
+      "id": "dom-7",
+      "assert": "v2: 연필 아이콘은 9x9 SVG (알람 반복 아이콘과 같은 크기 규격)",
+      "type": "expr",
+      "expr": "(s=>s.getAttribute('width')==='9'&&s.getAttribute('height')==='9')(document.querySelector('#cd-preset-row .cd-preset-edit svg'))",
+      "expect": true,
+      "v": 2
+    },
+    {
+      "id": "dom-8",
+      "assert": "수정/이름입력 모드에서는 해당 칸이 인라인 텍스트 입력 하나로 바뀐다",
+      "type": "expr",
+      "expr": "(()=>{startCdPresetEdit(0);const e=document.querySelectorAll('#cd-preset-row .cd-preset')[0];const r=e.querySelectorAll('input[type=text]').length===1&&!e.querySelector('.p-time');cancelCdPresetEdit();return r;})()",
+      "expect": true,
+      "v": 2
+    },
+    {
+      "id": "dom-9",
+      "assert": "프리셋 힌트 요소 #cd-hint 유지",
+      "type": "count",
+      "sel": "#cd-preset-sec #cd-hint",
+      "expect": 1
+    }
   ],
-
   "layout": [
-    { "id": "lay-1", "assert": "패널 폭 정확히 300px", "expr": "document.getElementById('panel-countdown').getBoundingClientRect().width", "expect": 300 },
-    { "id": "lay-2", "assert": "패널 안 가로 스크롤 없음", "expr": "(e=>e.scrollWidth<=e.clientWidth)(document.getElementById('panel-countdown'))", "expect": true },
-    { "id": "lay-3", "assert": "칩 4개 각각 폭 64.25px / 높이 38px", "expr": "[...document.querySelectorAll('#cd-preset-row>.cd-preset')].map(c=>[Math.round(c.getBoundingClientRect().width*100)/100,c.getBoundingClientRect().height])", "expect": [[64.25, 38], [64.25, 38], [64.25, 38], [64.25, 38]] },
-    { "id": "lay-4", "assert": "칩 내부 콘텐츠 넘침 없음(최장값 23:59:59 + 10자 이름에서도)", "setup": "cdPresets=[{sec:86399,name:'열글자짜리이름테스트'},{sec:86399,name:''},{sec:59,name:'짧'},{sec:3600,name:'긴이름다섯'}];renderCdPresets()", "expr": "[...document.querySelectorAll('#cd-preset-row>.cd-preset')].every(c=>c.scrollWidth<=c.clientWidth)", "expect": true },
-    { "id": "lay-5", "assert": "카운트다운 패널 총 높이 209px(기존 136px + 73px)", "expr": "Math.round(document.getElementById('panel-countdown').getBoundingClientRect().height)", "expect": 209, "tolerance": 2 },
-    { "id": "lay-6", "assert": "프리셋 행이 패널 콘텐츠 폭(272px)을 정확히 채움", "expr": "document.getElementById('cd-preset-row').getBoundingClientRect().width", "expect": 272 },
-    { "id": "lay-7", "assert": "패널 열렸을 때 syncWindowWidth가 늘어난 높이를 반영(set_window_rect height ≥ 시계높이+10+209)", "type": "manual_or_stub", "note": "Tauri invoke 스텁으로 마지막 호출 인자 캡처해서 검사" }
+    {
+      "id": "lay-1",
+      "assert": "패널 폭 정확히 300px",
+      "expr": "document.getElementById('panel-countdown').getBoundingClientRect().width",
+      "expect": 300
+    },
+    {
+      "id": "lay-2",
+      "assert": "패널 안 가로 스크롤 없음",
+      "expr": "(e=>e.scrollWidth<=e.clientWidth)(document.getElementById('panel-countdown'))",
+      "expect": true
+    },
+    {
+      "id": "lay-3",
+      "assert": "프리셋 칸 높이 38px",
+      "expr": "document.querySelector('#cd-preset-row .cd-preset').getBoundingClientRect().height",
+      "expect": 38
+    },
+    {
+      "id": "lay-4",
+      "assert": "프리셋 행에 가로 스크롤 없음(4칸이 300px 안에 들어감)",
+      "expr": "(e=>e.scrollWidth<=e.clientWidth)(document.getElementById('cd-preset-row'))",
+      "expect": true
+    },
+    {
+      "id": "lay-5",
+      "assert": "v2: 연필/삭제는 평소 숨김(opacity 0)",
+      "expr": "[getComputedStyle(document.querySelector('.cd-preset-edit')).opacity, getComputedStyle(document.querySelector('.cd-preset-del')).opacity]",
+      "expect": [
+        "0",
+        "0"
+      ],
+      "v": 2
+    },
+    {
+      "id": "lay-6",
+      "assert": "v2: 연필은 칸 왼쪽 모서리, 삭제는 오른쪽 모서리에 대칭으로 놓이고 서로 겹치지 않는다",
+      "expr": "(()=>{const c=document.querySelectorAll('#cd-preset-row .cd-preset')[0].getBoundingClientRect();const e=document.querySelector('#cd-preset-row .cd-preset-edit').getBoundingClientRect();const d=document.querySelector('#cd-preset-row .cd-preset-del').getBoundingClientRect();return {editLeft:Math.round(e.left-c.left),delRight:Math.round(c.right-d.right),overlap:e.right>d.left};})()",
+      "expect": {
+        "editLeft": 2,
+        "delRight": 2,
+        "overlap": false
+      },
+      "note": "2px인 이유: .cd-preset의 border 1px + 자식의 left/right 1px. 기존 ✕도 동일하게 2px이므로 완전한 대칭이다(1px을 기대하면 오답)",
+      "v": 2
+    },
+    {
+      "id": "lay-7",
+      "assert": "v2: 힌트 문구가 한 줄에 들어간다(줄바꿈/넘침 없음)",
+      "expr": "(e=>e.scrollWidth<=e.clientWidth)(document.getElementById('cd-hint'))",
+      "expect": true,
+      "v": 2
+    },
+    {
+      "id": "lay-8",
+      "assert": "v2: 아이콘이 시간 텍스트를 가리지 않는다 — 연필/삭제는 위쪽 모서리, .p-time은 세로 중앙",
+      "expr": "(()=>{const t=document.querySelector('#cd-preset-row .p-time').getBoundingClientRect();const e=document.querySelector('#cd-preset-row .cd-preset-edit').getBoundingClientRect();return e.bottom<=t.top+2;})()",
+      "expect": true,
+      "v": 2
+    }
   ],
-
   "behavior": [
-    { "id": "beh-1", "assert": "프리셋 단일 클릭 = 시/분/초 입력칸과 #cd-display에 반영, 타이머는 시작 안 함", "steps": ["cdPresets[0]={sec:1500,name:'뽀모도로'};renderCdPresets()", "click #cd-preset-row>.cd-preset:nth-child(1)"], "expect": { "cd-m.value": "25", "cd-display.textContent": "00:25:00", "cdRunning": false } },
-    { "id": "beh-2", "assert": "프리셋 더블클릭 = 반영 + 즉시 시작", "steps": ["dblclick #cd-preset-row>.cd-preset:nth-child(1)"], "expect": { "cdRunning": true } },
-    { "id": "beh-3", "assert": "저장 버튼(빈 칸 있음) = 첫 빈 칸에 저장 + 그 칸이 이름 입력 모드로 전환되고 focus", "steps": ["set cd-m=3", "click #cd-save-btn"], "expect": { "cdPresets_first_null_filled": true, "document.activeElement.tagName": "INPUT" } },
-    { "id": "beh-4", "assert": "이름 입력 후 Enter = name 저장 + localStorage 즉시 갱신", "steps": ["type '회의'", "press Enter"], "expect": { "cdPresets[i].name": "회의", "localStorage.cdPresets contains 회의": true } },
-    { "id": "beh-5", "assert": "이름 비운 채 Enter/blur = name='' 이고 칩에 .p-name 요소 없음(시간만 표시)", "expect": { "querySelector('.cd-preset .p-name') in that chip": null } },
-    { "id": "beh-6", "assert": "4칸 꽉 찬 상태에서 저장 = 덮어쓰기 선택 모드 진입(.pick 4개 + 힌트 문구 변경 + 저장버튼 .picking)", "steps": ["fill 4 slots", "set cd-m=7", "click #cd-save-btn"], "expect": { "cdPickMode": true, "count .cd-preset.pick in #cd-preset-row": 4, "#cd-hint.textContent": "덮어쓸 칸을 클릭 (Esc 취소)", "#cd-hint has .picking": true } },
-    { "id": "beh-7", "assert": "선택 모드에서 칩 클릭 = 그 슬롯만 교체, 나머지 3개 값 불변", "expect": { "changed_slots": 1 } },
-    { "id": "beh-8", "assert": "Esc 또는 저장 버튼 재클릭 = 선택 모드 취소, 데이터 변경 0", "expect": { "cdPickMode": false, "cdPresets unchanged": true } },
-    { "id": "beh-9", "assert": "칩 ✕ 클릭 = 그 슬롯만 null, 나머지 슬롯 인덱스 이동 없음(고정 슬롯), 클릭이 칩으로 버블되어 입력칸이 채워지지 않음", "steps": ["hover chip1", "click .cd-preset-del in chip1"], "expect": { "cdPresets[0]": null, "cdPresets[1..3] unchanged": true, "cd-m.value unchanged": true } },
-    { "id": "beh-10", "assert": "입력값이 0/전부 빈칸일 때 저장 = 아무 일도 일어나지 않음", "steps": ["clear cd-h/m/s", "click #cd-save-btn"], "expect": { "saved_count_delta": 0, "cdPickMode": false } },
-    { "id": "beh-11", "assert": "카운트다운 실행 중 = 저장 버튼 disabled + .cd-preset-sec.disabled(클릭 불가)", "steps": ["set cd-m=1", "cdReset()", "cdStart()"], "expect": { "#cd-save-btn.disabled": true, "#cd-preset-sec has .disabled": true } },
-    { "id": "beh-12", "assert": "일시정지/초기화하면 프리셋 영역 다시 활성", "steps": ["cdPause()"], "expect": { "#cd-save-btn.disabled": false, "#cd-preset-sec has .disabled": false } },
-    { "id": "beh-13", "assert": "localStorage 키는 'cdPresets', 값은 길이 4 배열(빈 칸은 null)", "expr": "(a=>Array.isArray(a)&&a.length===4)(JSON.parse(localStorage.getItem('cdPresets')))", "expect": true },
-    { "id": "beh-14", "assert": "재실행(reload) 후 프리셋 4칸 그대로 복원", "steps": ["reload"], "expect": { "rendered chips match saved": true } },
-    { "id": "beh-15", "assert": "localStorage 값이 손상('{{{')돼도 예외 없이 빈 4칸으로 시작", "steps": ["localStorage.setItem('cdPresets','{{{')", "reload"], "expect": { "no console error": true, "count .cd-preset.empty": 4 } },
-    { "id": "beh-16", "assert": "sec<=0 이거나 형식이 깨진 항목은 로드 시 null로 정규화", "steps": ["localStorage.setItem('cdPresets','[{\"sec\":0},{\"sec\":-5},{\"x\":1},{\"sec\":60,\"name\":\"ok\"}]')", "reload"], "expect": { "count .cd-preset.empty": 3 } }
+    {
+      "id": "beh-1",
+      "assert": "프리셋 단일 클릭 = 시/분/초 입력칸과 #cd-display에 반영, 타이머는 시작 안 함",
+      "steps": [
+        "cdPresets[0]={sec:1500,name:'뽀모도로'};renderCdPresets()",
+        "click #cd-preset-row>.cd-preset:nth-child(1)"
+      ],
+      "expect": {
+        "cd-m.value": "25",
+        "cd-display.textContent": "00:25:00",
+        "cdRunning": false
+      },
+      "v": 1
+    },
+    {
+      "id": "beh-2",
+      "assert": "프리셋 더블클릭 = 적용 후 즉시 시작",
+      "steps": [
+        "dblclick .cd-preset(0)"
+      ],
+      "expect": {
+        "cdRunning": true
+      },
+      "v": 1
+    },
+    {
+      "id": "beh-3",
+      "assert": "빈 칸 있으면 저장 = 첫 빈 칸에 기록 + 인라인 이름 입력 모드 진입",
+      "steps": [
+        "cd-m=5",
+        "cdSavePreset()"
+      ],
+      "expect": {
+        "cdPresets[3]": {
+          "sec": 300,
+          "name": ""
+        },
+        "cdNamingIdx": 3
+      },
+      "v": 1
+    },
+    {
+      "id": "beh-4",
+      "assert": "이름 확정 시 10자로 자르고 저장",
+      "steps": [
+        "name input='휴식'",
+        "commitCdPresetName(3)"
+      ],
+      "expect": {
+        "cdPresets[3]": {
+          "sec": 300,
+          "name": "휴식"
+        },
+        "cdNamingIdx": -1
+      },
+      "v": 1
+    },
+    {
+      "id": "beh-5",
+      "assert": "4칸 꽉 찬 상태에서 저장 = 덮어쓸 칸 선택(pick) 모드 + 힌트 전환",
+      "expect": {
+        "cdPickMode": true,
+        "cd-hint.textContent": "덮어쓸 칸을 클릭 (Esc 취소)"
+      },
+      "v": 1
+    },
+    {
+      "id": "beh-6",
+      "assert": "pick 모드에서 칸 클릭 = 덮어쓰기 후 이름 입력 모드(기존 동작 유지 — 이름 리셋됨)",
+      "steps": [
+        "writeCdPreset(0)"
+      ],
+      "expect": {
+        "cdPresets[0]": {
+          "sec": 540,
+          "name": ""
+        },
+        "cdNamingIdx": 0,
+        "cdPickMode": false
+      },
+      "v": 1
+    },
+    {
+      "id": "beh-7",
+      "assert": "Esc로 pick 모드 취소",
+      "expect": {
+        "cdPickMode": false
+      },
+      "v": 1
+    },
+    {
+      "id": "beh-8",
+      "assert": "카운트다운 실행 중에는 프리셋 섹션과 저장 버튼이 비활성",
+      "steps": [
+        "cdRunning=true;syncSaveBtn()"
+      ],
+      "expect": {
+        "cd-preset-sec.disabled": true,
+        "cd-save-btn.disabled": true
+      },
+      "v": 1
+    },
+    {
+      "id": "beh-9",
+      "assert": "입력 시간이 0이면 저장하지 않는다",
+      "steps": [
+        "시/분/초 모두 비움",
+        "cdSavePreset()"
+      ],
+      "expect": {
+        "cdPresets 변화": "없음"
+      },
+      "v": 1
+    },
+    {
+      "id": "beh-10",
+      "assert": "삭제 ✕는 클릭 전파를 막아 프리셋 적용이 같이 일어나지 않는다",
+      "expect": {
+        "stopPropagation": true
+      },
+      "v": 1
+    },
+    {
+      "id": "beh-11",
+      "assert": "loadCdPresets는 손상된 저장값(비배열/음수/누락)을 null로 정규화하고 길이 4를 유지",
+      "v": 1
+    },
+    {
+      "id": "beh-20",
+      "assert": "v2 드래그: 0번 칸을 오른쪽으로 한 칸(itemW=너비+5) 끌면 0↔1 순서가 바뀐다",
+      "steps": [
+        "cdPresets=['뽀모도로','라면','스트레칭',null]",
+        "mousedown .cd-preset(0) → mousemove +69px → mouseup"
+      ],
+      "expect": {
+        "cdPresets.map(name)": [
+          "라면",
+          "뽀모도로",
+          "스트레칭",
+          null
+        ]
+      },
+      "v": 2,
+      "critical": true
+    },
+    {
+      "id": "beh-21",
+      "assert": "v2 드래그: 바뀐 순서가 localStorage에 즉시 영속화된다",
+      "expect": {
+        "localStorage.cdPresets": [
+          "라면",
+          "뽀모도로",
+          "스트레칭",
+          null
+        ]
+      },
+      "v": 2,
+      "critical": true
+    },
+    {
+      "id": "beh-22",
+      "assert": "v2 드래그: 두 칸 이동도 정확히 반영(2번을 왼쪽 두 칸 → 맨 앞)",
+      "expect": {
+        "cdPresets.map(name)": [
+          "스트레칭",
+          "뽀모도로",
+          "라면",
+          null
+        ]
+      },
+      "v": 2
+    },
+    {
+      "id": "beh-23",
+      "assert": "v2 드래그: 빈 칸(null) 위치로 끌면 null이 밀려나며 배열 길이 4가 유지된다",
+      "steps": [
+        "0번을 맨 끝으로"
+      ],
+      "expect": {
+        "cdPresets.map(name)": [
+          "라면",
+          "스트레칭",
+          null,
+          "뽀모도로"
+        ],
+        "length": 4
+      },
+      "v": 2
+    },
+    {
+      "id": "beh-24",
+      "assert": "v2 드래그: 임계 미만(10px)의 작은 움직임은 순서를 바꾸지 않는다 — 클릭 오작동 방지",
+      "expect": {
+        "cdPresets.map(name)": [
+          "뽀모도로",
+          "라면",
+          "스트레칭",
+          null
+        ]
+      },
+      "v": 2,
+      "critical": true
+    },
+    {
+      "id": "beh-25",
+      "assert": "v2 드래그: 빈 칸은 끌 수 없다",
+      "expect": {
+        "순서 변화": "없음"
+      },
+      "v": 2
+    },
+    {
+      "id": "beh-26",
+      "assert": "v2 드래그: 종료 후 .dragging 클래스와 인라인 transform이 모두 정리된다(잔여 스타일 0건)",
+      "expect": {
+        "dragging count": 0,
+        "inline transform 남음": false
+      },
+      "v": 2,
+      "critical": true
+    },
+    {
+      "id": "beh-27",
+      "assert": "v2 드래그: 단순 클릭(적용)과 더블클릭(시작)이 그대로 동작한다",
+      "expect": {
+        "click → cd-display": "00:03:00",
+        "dblclick → cdRunning": true
+      },
+      "v": 2,
+      "critical": true
+    },
+    {
+      "id": "beh-28",
+      "assert": "v2 드래그: 순서를 바꾼 직후 이어지는 click이 '프리셋 적용'으로 새지 않는다",
+      "expect": {
+        "cd-display.textContent": "00:00:00"
+      },
+      "v": 2,
+      "note": "Chromium 실측 결과 renderCdPresets()가 원래 엘리먼트를 떼어내서 가드(cdSuppressClick) 없이도 click이 새지 않았다. 즉 이 가드는 방어적 코드이며 WebView2에서 dispatch 순서가 다를 경우를 대비한 것 — '이 가드가 없으면 버그난다'고 단정하지 말 것."
+    },
+    {
+      "id": "beh-29",
+      "assert": "v2 드래그: pick/naming/editing 모드 중이거나 실행 중이면 드래그가 시작되지 않는다",
+      "expect": {
+        "순서 변화": "없음"
+      },
+      "v": 2
+    },
+    {
+      "id": "beh-30",
+      "assert": "v2 드래그: 연필/삭제 버튼과 입력칸 위에서 시작한 mousedown은 드래그로 이어지지 않는다",
+      "expect": {
+        "드래그 시작": false
+      },
+      "v": 2
+    },
+    {
+      "id": "beh-40",
+      "assert": "v2 수정: 연필 클릭 → cdEditIdx 설정, 해당 칸 시간이 시/분/초 입력칸에 로드, 칸/저장버튼 금색, 힌트 전환",
+      "steps": [
+        "cdPresets[0]={sec:1500,name:'뽀모도로'}",
+        "click .cd-preset-edit(0)"
+      ],
+      "expect": {
+        "cdEditIdx": 0,
+        "[cd-h,cd-m,cd-s].value": [
+          "",
+          "25",
+          ""
+        ],
+        ".cd-preset(0).editing": true,
+        "#cd-save-btn.editing": true,
+        "#cd-hint.textContent": "시간 수정 후 저장 · Esc 취소"
+      },
+      "v": 2,
+      "critical": true
+    },
+    {
+      "id": "beh-41",
+      "assert": "v2 수정: 칸 안 인라인 입력칸에 기존 이름이 채워져 있다",
+      "expect": {
+        "#cd-preset-name-0.value": "뽀모도로"
+      },
+      "v": 2
+    },
+    {
+      "id": "beh-42",
+      "assert": "v2 수정: 시간만 바꾸고 저장 → 시간은 반영되고 이름은 보존된다. 이름 입력 모드로 빠지지 않는다",
+      "steps": [
+        "cd-m=30",
+        "cdSavePreset()"
+      ],
+      "expect": {
+        "cdPresets[0]": {
+          "sec": 1800,
+          "name": "뽀모도로"
+        },
+        "cdEditIdx": -1,
+        "cdNamingIdx": -1
+      },
+      "v": 2,
+      "critical": true,
+      "why": "형이 느낀 '지우고 다시 만들어야 한다'의 핵심 해소 지점. v1의 writeCdPreset은 여기서 name을 ''로 날렸다"
+    },
+    {
+      "id": "beh-43",
+      "assert": "v2 수정: 시간과 이름을 동시에 바꿔 저장",
+      "expect": {
+        "cdPresets[0]": {
+          "sec": 3000,
+          "name": "집중"
+        }
+      },
+      "v": 2
+    },
+    {
+      "id": "beh-44",
+      "assert": "v2 수정: 이름 입력칸에서 Enter로도 확정된다",
+      "expect": {
+        "cdPresets[1]": {
+          "sec": 420,
+          "name": "라면"
+        },
+        "cdEditIdx": -1
+      },
+      "v": 2
+    },
+    {
+      "id": "beh-45",
+      "assert": "v2 수정: Esc = 취소, 원본이 그대로 유지된다",
+      "steps": [
+        "startCdPresetEdit(0)",
+        "cd-m=99",
+        "Escape"
+      ],
+      "expect": {
+        "cdPresets[0]": {
+          "sec": 1500,
+          "name": "뽀모도로"
+        },
+        "cdEditIdx": -1
+      },
+      "v": 2,
+      "critical": true
+    },
+    {
+      "id": "beh-46",
+      "assert": "v2 수정: 시간을 0으로 비우고 저장해도 기존 시간이 유지된다(프리셋을 망가뜨리지 않음)",
+      "expect": {
+        "cdPresets[0].sec": 1500
+      },
+      "v": 2,
+      "why": "sec<=0이면 시간 변경만 무시하고 이름은 반영. 저장 자체를 거부하면 사용자가 갇히므로 '무시하고 통과'를 택함"
+    },
+    {
+      "id": "beh-47",
+      "assert": "v2 수정: 수정 중 다른 칸을 클릭해도 무시된다(실수로 편집 내용이 날아가지 않음)",
+      "expect": {
+        "cd-display.textContent": "00:00:00",
+        "cdEditIdx": 0
+      },
+      "v": 2,
+      "critical": true
+    },
+    {
+      "id": "beh-48",
+      "assert": "v2 수정: 수정 중인 칸을 삭제하면 cdEditIdx가 해제된다(유령 편집 상태 방지)",
+      "expect": {
+        "cdEditIdx": -1,
+        "cdPresets[0]": null
+      },
+      "v": 2
+    },
+    {
+      "id": "beh-49",
+      "assert": "v2 수정: 카운트다운 실행 중에는 수정 모드로 진입할 수 없다",
+      "expect": {
+        "cdEditIdx": -1
+      },
+      "v": 2
+    },
+    {
+      "id": "beh-50",
+      "assert": "v2 수정: 수정 모드에서는 blur로 확정하지 않는다(기존 naming 모드는 blur 확정 유지)",
+      "expect": {
+        "editing 모드 blur 리스너": "없음",
+        "naming 모드 blur 리스너": "있음"
+      },
+      "v": 2,
+      "critical": true,
+      "why": "시간을 고치려면 위쪽 시/분/초 입력칸을 눌러야 하는데, blur 확정이면 그 순간 편집이 끝나버려 시간 수정 자체가 불가능해진다. 두 모드가 같은 입력칸을 공유하지만 확정 조건은 달라야 하는 이유"
+    },
+    {
+      "id": "beh-51",
+      "assert": "v2 수정: 수정 모드와 pick 모드는 동시에 켜지지 않는다(진입 시 상대 모드 해제)",
+      "expect": {
+        "cdPickMode && cdEditIdx>=0": false
+      },
+      "v": 2
+    }
   ],
-
   "regression": [
-    { "id": "reg-1", "assert": "알람 패널 / 설정 패널의 DOM·CSS 변화 0건" },
-    { "id": "reg-2", "assert": "기존 cdStart/cdPause/cdReset/renderCd의 기존 동작(입력칸→시작, 일시정지 후 이어서 시작, 초기화) 그대로" },
-    { "id": "reg-3", "assert": "cdStart는 여전히 cdRemain===0일 때만 입력칸을 읽음(프리셋 클릭으로 cdRemain이 세팅된 뒤 시작 시 그 값이 쓰임)" },
-    { "id": "reg-4", "assert": "우클릭 컨텍스트 메뉴(#ctx-menu)와 충돌 없음 — 프리셋 UI는 우클릭을 쓰지 않음" },
-    { "id": "reg-5", "assert": "새 Esc 키 핸들러가 기존 전역 keydown 핸들러를 가로채지 않음(pick 모드일 때만 preventDefault 없이 동작)" },
-    { "id": "reg-6", "assert": "패널 색상 흰색 모드에서 칩 대비가 기존 컨트롤(.cd-btns button / .cd-row input)보다 나쁘지 않을 것. 실측 결과 셋 다 동일하게 흐릿함 = 기존부터 있던 조건이며 프리셋이 새로 만든 문제가 아님. 이번 작업에서 고치지 않고 동일 수준 유지만 확인.", "type": "render_image" }
+    {
+      "id": "reg-1",
+      "assert": "알람 패널 / 설정 패널의 DOM·CSS 변화 0건"
+    },
+    {
+      "id": "reg-2",
+      "assert": "기존 cdStart/cdPause/cdReset/renderCd의 기존 동작(입력칸→시작, 일시정지 후 이어서 시작, 초기화) 그대로"
+    },
+    {
+      "id": "reg-3",
+      "assert": "알람 드래그 정렬(startAlarmDrag/onAlarmDragMove/onAlarmDragEnd)의 코드·동작 변화 0건. 프리셋 드래그는 같은 패턴을 복제한 별도 함수이며 기존 함수를 재사용하거나 수정하지 않는다",
+      "critical": true
+    },
+    {
+      "id": "reg-4",
+      "assert": "applyCdPreset의 관찰 가능한 동작 불변. 시/분/초 채우는 3줄을 cdFillInputs()로 추출했을 뿐이며 결과값은 동일해야 한다",
+      "critical": true
+    },
+    {
+      "id": "reg-5",
+      "assert": "writeCdPreset / commitCdPresetName / removeCdPreset의 기존 동작 유지(removeCdPreset에 cdEditIdx 해제 1줄만 추가)"
+    },
+    {
+      "id": "reg-6",
+      "assert": "cdPresets 저장 포맷({sec,name} 또는 null, 길이 4) 불변 — v1에서 저장해둔 프리셋이 v2에서 그대로 읽힌다",
+      "critical": true
+    },
+    {
+      "id": "reg-7",
+      "assert": "localStorage 키 'cdPresets' 그대로 사용(마이그레이션 불필요)"
+    },
+    {
+      "id": "reg-8",
+      "assert": "패널 드래그로 창 이동하는 기존 동작과 충돌 없음 — clock-area mousedown 가드의 e.target.closest('...,.panel,...')에 이미 .panel이 포함돼 있어 프리셋 드래그가 창 이동으로 새지 않는다",
+      "critical": true
+    },
+    {
+      "id": "reg-9",
+      "assert": "syncWindowWidth 호출 지점 변화 없음 — 프리셋 행은 높이가 고정(38px)이라 드래그/수정 중에도 패널 높이가 변하지 않는다"
+    },
+    {
+      "id": "reg-10",
+      "assert": "Esc 키 핸들러가 기존 pick 모드 취소를 계속 처리한다(수정 모드 분기를 앞에 추가했을 뿐)"
+    }
+  ],
+  "open_questions": [
+    {
+      "q": "터치/펜 입력에서의 드래그",
+      "status": "이번 범위 밖. 기존 알람 드래그도 mouse 이벤트만 쓰고 있어 동일한 제약을 공유한다. K-Clock은 데스크톱 위젯이라 실사용 문제 없음.",
+      "blocking": false
+    },
+    {
+      "q": "드래그 손잡이(grab handle)를 따로 두지 않은 것",
+      "status": "의도. 38px 칸에 손잡이를 넣으면 시간 표시 공간을 잃는다. 칸 전체가 드래그 대상이고, 한 칸 밀리려면 약 35px(itemW의 절반)을 움직여야 해서 클릭/더블클릭과 충돌하지 않는 것을 실측으로 확인했다(beh-24). 대신 발견 가능성은 힌트 문구('드래그=순서')가 담당한다.",
+      "blocking": false
+    }
   ]
 }

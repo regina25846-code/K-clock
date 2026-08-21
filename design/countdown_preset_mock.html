@@ -2,10 +2,14 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>K-Clock 카운트다운 프리셋 시안</title>
+<title>K-Clock 카운트다운 프리셋 시안 v2</title>
 <style>
 /* ══════════════════════════════════════════════════════════════
-   K-Clock 카운트다운 패널 — 커스텀 프리셋 시안 (2026-08-21)
+   K-Clock 카운트다운 패널 — 커스텀 프리셋 시안
+     v1 (2026-08-21) 최초 설계 → v1.3.9-2로 배포됨
+     v2 (2026-08-21) 형 실사용 피드백 2건 반영
+        ① 드래그로 4칸 순서 바꾸기 + 이동 애니메이션
+        ② 삭제 없이 시간(+이름) 수정 — 호버 연필 아이콘으로 진입점 노출
    ※ 아래 CSS는 dist/index.html의 실제 값을 리터럴 그대로 복사한 것 +
      신규 .cd-preset* 규칙. 구현 시 이 블록의 신규 규칙만 <style>에 추가하면 됨.
    ══════════════════════════════════════════════════════════════ */
@@ -34,7 +38,7 @@ body { font-family:'Segoe UI',sans-serif; }
 .cd-btns { display:flex; gap:5px; justify-content:center; }
 .cd-btns button { padding:4px 10px; border:1px solid rgba(255,255,255,0.15); border-radius:5px; font-size:11px; cursor:pointer; white-space:nowrap; background:rgba(255,255,255,0.08); color:#b8b8b8; }
 
-/* ══════ 신규: 카운트다운 프리셋 ══════ */
+/* ══════ 카운트다운 프리셋 ══════ */
 
 /* 저장 버튼 — .btn-add(알람 "추가")와 완전히 동일한 스펙 */
 .cd-save-btn { flex-shrink:0; width:36px; padding:5px 0; margin-left:2px; background:rgba(255,255,255,0.10); color:#b8b8b8; border:1px solid rgba(255,255,255,0.15); border-radius:5px; font-size:11px; cursor:pointer; text-align:center; }
@@ -65,9 +69,27 @@ body { font-family:'Segoe UI',sans-serif; }
 /* 인라인 이름 입력 — .alarm-item input[type=text] 계열 */
 .cd-preset input[type=text] { width:100%; min-width:0; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#b8b8b8; padding:2px 3px; font-size:10px; text-align:center; outline:none; font-family:inherit; }
 
-/* 힌트 한 줄 — 색은 .empty-msg와 동일 #777 */
-.cd-hint { font-size:10px; color:#777; text-align:center; margin-top:6px; height:12px; line-height:12px; }
+/* 힌트 한 줄 — #777은 실기에서 너무 어두워 안 보인다고 형이 지적, 본문색 #b8b8b8로 상향(2026-08-21) */
+.cd-hint { font-size:10px; color:#b8b8b8; text-align:center; margin-top:6px; height:12px; line-height:12px; }
 .cd-hint.picking { color:#c9a35c; }
+
+/* ══════ v2 신규 ① 드래그 재정렬 ══════ */
+/* 알람 목록의 .alarm-item.dragging과 같은 계열(떠오른 느낌: 배경 강조 + 그림자).
+   .cd-preset은 이미 position:relative / border-radius:5px를 갖고 있어 z-index만 추가하면 됨. */
+.cd-preset.dragging { z-index:5; cursor:grabbing; background:rgba(255,255,255,0.14); box-shadow:0 2px 8px rgba(0,0,0,0.4); }
+/* 끌고 가는 칸은 커서를 1:1로 따라가야 하므로 transition을 주지 않는다.
+   자리를 비켜주는 나머지 칸에만 JS가 인라인으로 transition:transform 0.15s ease를 건다
+   (알람 드래그와 완전히 동일한 방식·수치). */
+
+/* ══════ v2 신규 ② 시간/이름 수정 ══════ */
+/* 연필 = 삭제 ✕의 거울상. 같은 칸 안 반대쪽 모서리, 같은 호버 노출 방식.
+   색은 .close-panel과 같은 rgba(184,184,184,0.5) — ✕(빨강)와 달리 파괴적이지 않음을 색으로 구분. */
+.cd-preset-edit { position:absolute; top:0; left:1px; background:none; border:none; color:rgba(184,184,184,0.5); font-size:10px; line-height:1; cursor:pointer; padding:1px 2px; opacity:0; display:flex; align-items:center; }
+.cd-preset:hover .cd-preset-edit { opacity:1; }
+/* 수정 중인 칸 — pick과 같은 금색 강조(같은 '지금 이 칸이 대상' 의미) */
+.cd-preset.editing { border-color:#c9a35c; color:#c9a35c; }
+.cd-preset.editing .p-name { color:#c9a35c; }
+.cd-save-btn.editing { color:#c9a35c; border-color:#c9a35c; }
 </style>
 </head>
 <body class="mock">
@@ -99,13 +121,13 @@ body { font-family:'Segoe UI',sans-serif; }
 
     <div class="cd-preset-sec" id="cd-preset-sec">
       <div class="cd-preset-row" id="cd-preset-row"></div>
-      <div class="cd-hint" id="cd-hint">클릭 = 설정 · 더블클릭 = 바로 시작</div>
+      <div class="cd-hint" id="cd-hint">클릭=설정 · 더블클릭=시작 · 드래그=순서</div>
     </div>
   </div>
-  <div class="mock-caption">A · 기본 상태 (직접 눌러볼 수 있음)</div>
+  <div class="mock-caption">A · 기본 상태 (드래그·연필 직접 눌러볼 수 있음)</div>
 </div>
 
-<!-- ═══ 시안 B: 정적 상태 스냅샷 3종 ═══ -->
+<!-- ═══ 시안 B: 정적 상태 스냅샷 ═══ -->
 <div class="mock-stage">
   <div class="panel open" style="border-radius:10px">
     <div class="panel-title">카운트다운 · 빈 슬롯</div>
@@ -116,44 +138,68 @@ body { font-family:'Segoe UI',sans-serif; }
         <div class="cd-preset empty">+</div>
         <div class="cd-preset empty">+</div>
       </div>
-      <div class="cd-hint">클릭 = 설정 · 더블클릭 = 바로 시작</div>
+      <div class="cd-hint">클릭=설정 · 더블클릭=시작 · 드래그=순서</div>
     </div>
   </div>
   <div class="mock-caption">B1 · 2개 저장 + 빈 슬롯 2개</div>
 
   <div class="panel open" style="border-radius:10px;margin-top:18px">
-    <div class="panel-title">카운트다운 · 덮어쓸 칸 선택</div>
+    <div class="panel-title">카운트다운 · 호버 시 두 아이콘</div>
     <div class="cd-preset-sec" style="border-top:none;margin-top:0;padding-top:0">
       <div class="cd-preset-row">
-        <div class="cd-preset pick"><span class="p-time">25:00</span><span class="p-name">뽀모도로</span></div>
-        <div class="cd-preset pick"><span class="p-time">03:00</span><span class="p-name">라면</span></div>
-        <div class="cd-preset pick"><span class="p-time">10:00</span><span class="p-name">스트레칭</span></div>
-        <div class="cd-preset pick"><span class="p-time">1:00:00</span></div>
+        <div class="cd-preset" style="background:rgba(255,255,255,0.14)">
+          <button class="cd-preset-edit" style="opacity:1" title="시간·이름 수정"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>
+          <span class="p-time">25:00</span><span class="p-name">뽀모도로</span>
+          <button class="cd-preset-del" style="opacity:1" title="삭제">✕</button>
+        </div>
+        <div class="cd-preset"><span class="p-time">03:00</span><span class="p-name">라면</span></div>
+        <div class="cd-preset"><span class="p-time">10:00</span><span class="p-name">스트레칭</span></div>
+        <div class="cd-preset empty">+</div>
       </div>
-      <div class="cd-hint picking">덮어쓸 칸을 클릭 (Esc 취소)</div>
+      <div class="cd-hint">클릭=설정 · 더블클릭=시작 · 드래그=순서</div>
     </div>
   </div>
-  <div class="mock-caption">B2 · 4칸 꽉 참 → 저장 누른 직후</div>
+  <div class="mock-caption">B2 · 왼쪽 연필=수정 / 오른쪽 ✕=삭제</div>
 
   <div class="panel open" style="border-radius:10px;margin-top:18px">
-    <div class="panel-title">카운트다운 · 이름 입력</div>
-    <div class="cd-preset-sec" style="border-top:none;margin-top:0;padding-top:0">
+    <div class="panel-title">카운트다운 · 수정 중</div>
+    <div class="cd-row">
+      <input type="number" value="0" placeholder="시"><span>:</span>
+      <input type="number" value="30" placeholder="분"><span>:</span>
+      <input type="number" value="0" placeholder="초">
+      <button class="cd-save-btn editing">저장</button>
+    </div>
+    <div class="cd-preset-sec" style="border-top:none;margin-top:8px;padding-top:0">
       <div class="cd-preset-row">
-        <div class="cd-preset"><span class="p-time">25:00</span><span class="p-name">뽀모도로</span></div>
-        <div class="cd-preset"><input type="text" value="" placeholder="이름"></div>
-        <div class="cd-preset empty">+</div>
+        <div class="cd-preset editing"><input type="text" value="뽀모도로" placeholder="이름"></div>
+        <div class="cd-preset"><span class="p-time">03:00</span><span class="p-name">라면</span></div>
+        <div class="cd-preset"><span class="p-time">10:00</span><span class="p-name">스트레칭</span></div>
         <div class="cd-preset empty">+</div>
       </div>
-      <div class="cd-hint picking">이름 입력 후 Enter (비우면 시간만)</div>
+      <div class="cd-hint picking">시간 수정 후 저장 · Esc 취소</div>
     </div>
   </div>
-  <div class="mock-caption">B3 · 저장 직후 인라인 이름 입력</div>
+  <div class="mock-caption">B3 · 연필 클릭 → 시간은 위 입력칸, 이름은 칸 안에서</div>
+
+  <div class="panel open" style="border-radius:10px;margin-top:18px">
+    <div class="panel-title">카운트다운 · 드래그 중</div>
+    <div class="cd-preset-sec" style="border-top:none;margin-top:0;padding-top:0">
+      <div class="cd-preset-row">
+        <div class="cd-preset" style="transform:translateX(69.25px);transition:transform 0.15s ease"><span class="p-time">03:00</span><span class="p-name">라면</span></div>
+        <div class="cd-preset dragging" style="transform:translateX(-48px)"><span class="p-time">25:00</span><span class="p-name">뽀모도로</span></div>
+        <div class="cd-preset"><span class="p-time">10:00</span><span class="p-name">스트레칭</span></div>
+        <div class="cd-preset empty">+</div>
+      </div>
+      <div class="cd-hint">클릭=설정 · 더블클릭=시작 · 드래그=순서</div>
+    </div>
+  </div>
+  <div class="mock-caption">B4 · 1번 칸을 왼쪽으로 끌어 2번과 자리 교환</div>
 </div>
 
 <script>
 /* ══════════════════════════════════════════════════════════════
    구현 참고용 로직 — dist/index.html의 카운트다운 섹션에 그대로 이식 가능
-   (기존 cdStart/cdPause/cdReset/renderCd는 아래에서 최소 수정)
+   v2 신규분은 「v2」 주석으로 표시
    ══════════════════════════════════════════════════════════════ */
 
 const CD_PRESET_MAX = 4;
@@ -161,6 +207,8 @@ const CD_PRESET_MAX = 4;
 let cdPresets = [null, null, null, null];
 let cdPickMode = false;      // 덮어쓸 칸 선택 모드
 let cdNamingIdx = -1;        // 인라인 이름 입력 중인 슬롯 index
+let cdEditIdx = -1;          // v2: 시간·이름 수정 중인 슬롯 index
+let cdSuppressClick = false; // v2: 드래그로 순서가 바뀐 직후의 click 1회 무시
 
 function saveCdPresets(){ localStorage.setItem('cdPresets', JSON.stringify(cdPresets)); }
 
@@ -192,37 +240,61 @@ function cdInputSec(){
   return h*3600 + m*60 + s;
 }
 
+/* v2: 시/분/초 입력칸 채우기 — applyCdPreset과 수정모드 진입이 공유(동작은 기존과 동일) */
+function cdFillInputs(sec){
+  document.getElementById('cd-h').value = Math.floor(sec/3600) || '';
+  document.getElementById('cd-m').value = Math.floor((sec%3600)/60) || '';
+  document.getElementById('cd-s').value = sec%60 || '';
+}
+
+const CD_EDIT_ICON = `<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>`;
+
 function renderCdPresets(){
   const row = document.getElementById('cd-preset-row');
   row.innerHTML = '';
   for(let i=0;i<CD_PRESET_MAX;i++){
     const p = cdPresets[i];
     const el = document.createElement('div');
-    el.className = 'cd-preset' + (p ? '' : ' empty') + (cdPickMode ? ' pick' : '');
-    if(i === cdNamingIdx && p){
+    el.className = 'cd-preset' + (p ? '' : ' empty') + (cdPickMode ? ' pick' : '') + (i===cdEditIdx ? ' editing' : '');
+
+    /* 이름 입력(저장 직후) / 수정 모드 — 둘 다 칸 안에 인라인 텍스트 입력을 띄운다 */
+    if((i === cdNamingIdx || i === cdEditIdx) && p){
+      const editing = (i === cdEditIdx);
       el.innerHTML = `<input type="text" id="cd-preset-name-${i}" value="${p.name.replace(/"/g,'&quot;')}" placeholder="이름" maxlength="10">`;
       row.appendChild(el);
       const inp = el.querySelector('input');
       inp.addEventListener('keydown', e=>{
-        if(e.key==='Enter'){ commitCdPresetName(i); }
-        else if(e.key==='Escape'){ cdNamingIdx=-1; renderCdPresets(); }
+        if(e.key==='Enter'){ editing ? commitCdPresetEdit(i) : commitCdPresetName(i); }
+        else if(e.key==='Escape'){ editing ? cancelCdPresetEdit() : (cdNamingIdx=-1, renderCdPresets()); }
       });
-      inp.addEventListener('blur', ()=>{ if(cdNamingIdx===i) commitCdPresetName(i); });
+      /* v2: 수정 모드에서는 blur로 확정하지 않는다.
+         시간을 고치려면 위쪽 시/분/초 입력칸을 눌러야 하는데, 그 순간 blur가 나서
+         먼저 확정돼 버리면 시간 수정이 아예 불가능해진다.
+         (이름만 넣는 기존 naming 모드는 다른 데 누를 일이 없으므로 blur 확정 유지) */
+      if(!editing) inp.addEventListener('blur', ()=>{ if(cdNamingIdx===i) commitCdPresetName(i); });
       setTimeout(()=>inp.focus(),0);
       continue;
     }
+
     if(p){
-      el.title = `${fmtPreset(p.sec)}${p.name?' '+p.name:''} — 클릭: 설정 / 더블클릭: 바로 시작`;
-      el.innerHTML = `<span class="p-time">${fmtPreset(p.sec)}</span>`
+      el.title = `${fmtPreset(p.sec)}${p.name?' '+p.name:''} — 클릭: 설정 / 더블클릭: 바로 시작 / 끌어서 순서 변경`;
+      el.innerHTML = `<button class="cd-preset-edit" title="시간·이름 수정">${CD_EDIT_ICON}</button>`
+        + `<span class="p-time">${fmtPreset(p.sec)}</span>`
         + (p.name ? `<span class="p-name">${p.name}</span>` : '')
         + `<button class="cd-preset-del" title="삭제">✕</button>`;
       el.querySelector('.cd-preset-del').onclick = e=>{ e.stopPropagation(); removeCdPreset(i); };
-      el.onclick = ()=> cdPickMode ? writeCdPreset(i) : applyCdPreset(i);
-      el.ondblclick = ()=>{ if(!cdPickMode){ applyCdPreset(i); cdStart(); } };
+      el.querySelector('.cd-preset-edit').onclick = e=>{ e.stopPropagation(); startCdPresetEdit(i); };  // v2
+      el.onclick = ()=>{
+        if(cdSuppressClick) return;                       // v2: 드래그 직후 클릭 무시
+        if(cdEditIdx >= 0) return;                        // v2: 수정 중엔 다른 칸 클릭 무시(실수로 값 날리는 것 방지)
+        cdPickMode ? writeCdPreset(i) : applyCdPreset(i);
+      };
+      el.ondblclick = ()=>{ if(!cdPickMode && cdEditIdx < 0){ applyCdPreset(i); cdStart(); } };
+      el.addEventListener('mousedown', e=>startCdPresetDrag(e, el, i));   // v2
     } else {
       el.textContent = '+';
       el.title = '현재 입력한 시간을 이 칸에 저장';
-      el.onclick = ()=> writeCdPreset(i);
+      el.onclick = ()=>{ if(cdEditIdx < 0) writeCdPreset(i); };
     }
     row.appendChild(el);
   }
@@ -231,9 +303,10 @@ function renderCdPresets(){
 
 function updateCdHint(){
   const hint = document.getElementById('cd-hint');
+  if(cdEditIdx >= 0){ hint.textContent='시간 수정 후 저장 · Esc 취소'; hint.classList.add('picking'); return; }   // v2
   if(cdNamingIdx >= 0){ hint.textContent='이름 입력 후 Enter (비우면 시간만)'; hint.classList.add('picking'); return; }
   if(cdPickMode){ hint.textContent='덮어쓸 칸을 클릭 (Esc 취소)'; hint.classList.add('picking'); return; }
-  hint.textContent='클릭 = 설정 · 더블클릭 = 바로 시작';
+  hint.textContent='클릭=설정 · 더블클릭=시작 · 드래그=순서';
   hint.classList.remove('picking');
 }
 
@@ -241,17 +314,50 @@ function updateCdHint(){
 function applyCdPreset(i){
   const p = cdPresets[i];
   if(!p || cdRunning) return;
-  document.getElementById('cd-h').value = Math.floor(p.sec/3600) || '';
-  document.getElementById('cd-m').value = Math.floor((p.sec%3600)/60) || '';
-  document.getElementById('cd-s').value = p.sec%60 || '';
+  cdFillInputs(p.sec);
   cdPause();
   cdRemain = p.sec;
   renderCd();
 }
 
-// 저장 버튼: 빈 칸 있으면 첫 빈 칸에 저장, 꽉 찼으면 덮어쓸 칸 선택 모드
+/* ══════ v2 ② 시간·이름 수정 ══════
+   진입: 칸 호버 → 왼쪽 연필 클릭
+   시간은 위쪽 시/분/초 입력칸에 불러와서 고치고(좁은 칸에 입력칸 3개를 새로 만들지 않음),
+   이름은 칸 안 인라인 입력으로 고친다. 알람의 "시간+이름 같이 고치고 저장"과 같은 구조. */
+function startCdPresetEdit(i){
+  if(cdRunning || !cdPresets[i]) return;
+  cdPickMode = false;          // 두 모드는 동시에 켜지지 않는다
+  cdNamingIdx = -1;
+  cdEditIdx = i;
+  cdFillInputs(cdPresets[i].sec);
+  renderCdPresets();
+  syncSaveBtn();
+}
+
+function commitCdPresetEdit(i){
+  const p = cdPresets[i];
+  if(!p){ cancelCdPresetEdit(); return; }
+  const inp = document.getElementById('cd-preset-name-'+i);
+  const sec = cdInputSec();
+  // 시간을 0으로 만들어 놓고 저장해도 프리셋을 망가뜨리지 않는다 — 기존 시간을 유지.
+  if(sec > 0) p.sec = sec;
+  if(inp) p.name = inp.value.trim().slice(0,10);   // 이름 보존/수정 (v1의 덮어쓰기는 이름을 날렸음)
+  cdEditIdx = -1;
+  saveCdPresets();
+  renderCdPresets();
+  syncSaveBtn();
+}
+
+function cancelCdPresetEdit(){
+  cdEditIdx = -1;
+  renderCdPresets();
+  syncSaveBtn();
+}
+
+// 저장 버튼: 수정 중이면 확정 / 빈 칸 있으면 첫 빈 칸에 저장 / 꽉 찼으면 덮어쓸 칸 선택 모드
 function cdSavePreset(){
   if(cdRunning) return;
+  if(cdEditIdx >= 0){ commitCdPresetEdit(cdEditIdx); return; }      // v2
   if(cdPickMode){ cdPickMode=false; renderCdPresets(); syncSaveBtn(); return; }
   if(cdInputSec() <= 0) return;
   const empty = cdPresets.indexOf(null);
@@ -283,21 +389,86 @@ function commitCdPresetName(i){
 function removeCdPreset(i){
   cdPresets[i] = null;
   if(cdNamingIdx === i) cdNamingIdx = -1;
+  if(cdEditIdx === i) cdEditIdx = -1;      // v2
   saveCdPresets();
   renderCdPresets();
   syncSaveBtn();
+}
+
+/* ══════ v2 ① 드래그 재정렬 ══════
+   알람 목록의 startAlarmDrag/onAlarmDragMove/onAlarmDragEnd를 가로 방향으로 옮긴 것.
+   세로(translateY, itemH=높이+4) → 가로(translateX, itemW=너비+5(.cd-preset-row의 gap)).
+   임계값을 따로 두지 않는 것도 알람과 동일 — 한 칸 밀리려면 itemW의 절반(약 35px)을
+   움직여야 해서 단순 클릭/더블클릭이 실수로 순서를 바꾸지 못한다. */
+let cdDragCtx = null;
+
+function startCdPresetDrag(e, item, idx){
+  if(e.button !== 0) return;
+  if(cdPickMode || cdNamingIdx >= 0 || cdEditIdx >= 0) return;   // 다른 모드 중엔 드래그 금지
+  if(cdRunning || !cdPresets[idx]) return;                       // 실행 중 / 빈 칸은 못 끈다
+  if(e.target.closest('.cd-preset-del,.cd-preset-edit,input')) return;
+  e.preventDefault();
+  const row = document.getElementById('cd-preset-row');
+  const children = Array.from(row.children);
+  const itemW = item.offsetWidth + 5;                            // gap:5px
+  cdDragCtx = { item, idx, curIdx: idx, children, startX: e.clientX, itemW };
+  item.classList.add('dragging');
+  document.addEventListener('mousemove', onCdPresetDragMove);
+  document.addEventListener('mouseup', onCdPresetDragEnd);
+}
+
+function onCdPresetDragMove(e){
+  if(!cdDragCtx) return;
+  const dx = e.clientX - cdDragCtx.startX;
+  cdDragCtx.item.style.transform = `translateX(${dx}px)`;
+  const steps = Math.round(dx / cdDragCtx.itemW);
+  const newIdx = Math.min(cdDragCtx.children.length-1, Math.max(0, cdDragCtx.idx + steps));
+  if(newIdx !== cdDragCtx.curIdx){
+    cdDragCtx.children.forEach((sib,j)=>{
+      if(sib === cdDragCtx.item) return;
+      let shift = 0;
+      if(newIdx > cdDragCtx.idx && j > cdDragCtx.idx && j <= newIdx) shift = -cdDragCtx.itemW;
+      else if(newIdx < cdDragCtx.idx && j < cdDragCtx.idx && j >= newIdx) shift = cdDragCtx.itemW;
+      sib.style.transition = 'transform 0.15s ease';
+      sib.style.transform = `translateX(${shift}px)`;
+    });
+    cdDragCtx.curIdx = newIdx;
+  }
+}
+
+function onCdPresetDragEnd(){
+  if(!cdDragCtx) return;
+  const { item, idx, curIdx, children } = cdDragCtx;
+  document.removeEventListener('mousemove', onCdPresetDragMove);
+  document.removeEventListener('mouseup', onCdPresetDragEnd);
+  item.classList.remove('dragging');
+  item.style.transition = ''; item.style.transform = '';
+  children.forEach(c=>{ if(c!==item){ c.style.transition=''; c.style.transform=''; } });
+  cdDragCtx = null;
+  if(curIdx !== idx){
+    const moved = cdPresets.splice(idx,1)[0];
+    cdPresets.splice(curIdx,0,moved);          // 빈 칸(null)도 같이 밀린다 = 배열 길이 4 유지
+    saveCdPresets();
+    renderCdPresets();
+    // mouseup 직후 이어서 발생하는 click이 "프리셋 적용"으로 새는 걸 막는다.
+    cdSuppressClick = true;
+    setTimeout(()=>{ cdSuppressClick = false; }, 0);
+  }
 }
 
 // 실행 중이면 프리셋 영역/저장 버튼 비활성
 function syncSaveBtn(){
   const btn = document.getElementById('cd-save-btn');
   btn.classList.toggle('picking', cdPickMode);
+  btn.classList.toggle('editing', cdEditIdx >= 0);      // v2
   btn.disabled = cdRunning;
   document.getElementById('cd-preset-sec').classList.toggle('disabled', cdRunning);
 }
 
 document.addEventListener('keydown', e=>{
-  if(e.key==='Escape' && cdPickMode){ cdPickMode=false; renderCdPresets(); syncSaveBtn(); }
+  if(e.key !== 'Escape') return;
+  if(cdEditIdx >= 0){ cancelCdPresetEdit(); return; }                                    // v2
+  if(cdPickMode){ cdPickMode=false; renderCdPresets(); syncSaveBtn(); }
 });
 
 /* ── 기존 카운트다운 로직 (수정점만 주석) ── */
@@ -306,13 +477,13 @@ function cdStart(){
   if(!cdRunning && cdRemain===0) cdRemain = cdInputSec();
   if(!cdRemain) return;
   cdRunning=true; clearInterval(cdTimer);
-  syncSaveBtn();                                   // ← 추가
+  syncSaveBtn();
   cdTimer=setInterval(()=>{
     if(cdRemain<=0){ clearInterval(cdTimer); cdRunning=false; syncSaveBtn(); /* triggerAlarm(); */ return; }
     cdRemain--; renderCd();
   },1000);
 }
-function cdPause(){ cdRunning=false; clearInterval(cdTimer); syncSaveBtn(); }   // ← syncSaveBtn 추가
+function cdPause(){ cdRunning=false; clearInterval(cdTimer); syncSaveBtn(); }
 function cdReset(){ cdPause(); cdRemain=0; document.getElementById('cd-display').textContent='00:00:00'; }
 function renderCd(){
   const h=Math.floor(cdRemain/3600), m=Math.floor((cdRemain%3600)/60), s=cdRemain%60;
@@ -325,6 +496,7 @@ loadCdPresets();
 if(cdPresets.every(p=>!p)){
   cdPresets[0] = { sec:1500, name:'뽀모도로' };
   cdPresets[1] = { sec:180,  name:'라면' };
+  cdPresets[2] = { sec:600,  name:'스트레칭' };
 }
 renderCdPresets();
 syncSaveBtn();

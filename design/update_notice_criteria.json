@@ -1,0 +1,621 @@
+{
+  "spec": "K-시리즈 공용 업데이트 안내 컴포넌트 (K-Clock 파일럿)",
+  "date": "2026-08-21",
+  "mock": "design/update_notice_mock.html",
+  "target": "dist/index.html",
+  "note": "check_*.py 계열 기계 대조 스크립트의 입력. css 항목은 getComputedStyle 대조, css_unchanged는 소스 문자열 완전일치, dom/layout/behavior는 렌더 후 평가. 모든 기대값은 시안을 Chromium으로 실제 렌더해서 뽑은 실측값(근사치 아님).",
+
+  "component": {
+    "form": "패널형(K-Clock) — 기존 .panel 재사용. 신규 창/모달/리사이즈 코드 0줄",
+    "shell_portable": ".upd-shell--modal — K-Zone/K-Tube/K-Memo/K-Music 포팅용. 카드(.upd-card 이하)는 5개 앱 공용, 셸만 교체",
+    "tokens": ["--upd-accent", "--upd-fg", "--upd-dim", "--upd-line", "--upd-ctl-bg", "--upd-ctl-br"],
+    "token_note": "포팅 시 이 6개만 덮어쓰면 나머지 규칙 재사용. 기본값은 K-Clock 다크 톤"
+  },
+
+  "css": [
+    {
+      "sel": ".upd-card",
+      "props": {
+        "--upd-accent": "#c9a35c",
+        "--upd-fg": "#b8b8b8",
+        "--upd-dim": "#777",
+        "--upd-line": "rgba(255,255,255,0.08)",
+        "--upd-ctl-bg": "rgba(255,255,255,0.08)",
+        "--upd-ctl-br": "rgba(255,255,255,0.15)"
+      },
+      "why": "앱별 재정의 지점을 카드 한 곳으로 모음. 값 자체는 전부 기존 K-Clock 실사용 색이라 신규 색상 도입 0건",
+      "raw_value_check": true
+    },
+    {
+      "sel": ".upd-head",
+      "props": {
+        "display": "flex",
+        "align-items": "center",
+        "gap": "6px",
+        "margin-bottom": "8px"
+      },
+      "why": "gap 6px = 기존 .alarm-row와 동일"
+    },
+    {
+      "sel": ".upd-badge",
+      "props": {
+        "font-size": "10px",
+        "line-height": "12px",
+        "padding": "1px 5px",
+        "border": "1px solid rgb(201, 163, 92)",
+        "border-radius": "4px",
+        "color": "rgb(201, 163, 92)",
+        "font-family": "Consolas, monospace"
+      },
+      "why": "#c9a35c(금색). 초록 #4a9은 기존에 'on/활성' 의미로 이미 점유돼 있어서(.alarm-toggle.on, .btn-repeat.active, .toggle) 재사용하면 상태 표시로 오해됨 — 업데이트 안내는 상태가 아니라 알림이라 별도 톤. 금색은 .cd-save-btn.picking / .cd-preset.pick에서 이미 '새 기능' 강조색으로 쓰던 값. border-radius 4px는 기존 .color-btn / .cd-preset input과 동일"
+    },
+    {
+      "sel": ".upd-headline",
+      "props": {
+        "font-size": "12px",
+        "color": "rgba(184, 184, 184, 0.9)",
+        "white-space": "nowrap",
+        "text-overflow": "ellipsis",
+        "overflow": "hidden"
+      },
+      "why": "색은 기존 .panel-title과 동일(rgba(184,184,184,0.9)). 300px 폭에서 문구가 길어져도 줄바꿈 대신 말줄임"
+    },
+    {
+      "sel": ".upd-body",
+      "props": {
+        "max-height": "180px",
+        "overflow-y": "auto",
+        "overflow-x": "hidden"
+      },
+      "why": "180px = 기존 .alarm-list max-height와 정확히 동일. 건너뛴 버전이 많아도 패널 높이(=네이티브 창 높이)가 폭주하지 않게 막는 핵심 상한"
+    },
+    {
+      "sel": ".upd-body::-webkit-scrollbar",
+      "props": { "width": "5px" },
+      "why": "기존 .alarm-list::-webkit-scrollbar와 동일(5px). .cdd-list의 6px가 아니라 리스트 계열인 알람 쪽에 맞춤"
+    },
+    {
+      "sel": ".upd-body::-webkit-scrollbar-thumb",
+      "props": { "background": "rgba(255,255,255,0.15)", "border-radius": "3px" },
+      "why": "기존 .alarm-list 스크롤바 thumb과 동일",
+      "raw_value_check": true
+    },
+    {
+      "sel": ".upd-ver",
+      "props": {
+        "padding": "6px 0px",
+        "border-bottom": "1px solid rgba(255, 255, 255, 0.08)"
+      },
+      "why": "구분선 rgba(255,255,255,0.08) = 기존 .setting-row / .alarm-item / .cd-preset-sec와 동일",
+      "note": "첫 블록은 padding-top:0, 마지막 블록은 padding-bottom:0 + border-bottom:none (아래 dom-9/dom-10에서 검사)"
+    },
+    {
+      "sel": ".upd-ver-head",
+      "props": { "display": "flex", "align-items": "baseline", "gap": "5px", "margin-bottom": "4px" },
+      "why": "gap 5px = 기존 .cd-btns / .cd-preset-row와 동일"
+    },
+    {
+      "sel": ".upd-ver-num",
+      "props": { "font-size": "11px", "color": "rgb(184, 184, 184)", "font-family": "Consolas, monospace" },
+      "why": "숫자 정렬 위해 기존 #cd-display / .cd-preset .p-time과 같은 Consolas 사용"
+    },
+    {
+      "sel": ".upd-ver-date",
+      "props": { "font-size": "10px", "color": "rgb(119, 119, 119)" },
+      "why": "#777 = 기존 안내문구 톤(.empty-msg, .cd-hint, .cdd-divider)"
+    },
+    {
+      "sel": ".upd-list",
+      "props": { "list-style-type": "none", "display": "flex", "flex-direction": "column", "gap": "3px" },
+      "why": "기본 ul 불릿 제거(자체 ::before 점 사용). gap 3px는 11px 본문에서 줄 간 최소 호흡"
+    },
+    {
+      "sel": ".upd-item",
+      "props": {
+        "font-size": "11px",
+        "line-height": "16.5px",
+        "color": "rgb(184, 184, 184)",
+        "padding-left": "9px",
+        "word-break": "keep-all",
+        "position": "relative"
+      },
+      "why": "11px = 기존 .empty-msg / .alarm-item과 동일. line-height 1.5(=16.5px)는 한글 줄글 가독용. word-break:keep-all은 300px 폭에서 한국어 단어 중간이 잘리는 걸 방지"
+    },
+    {
+      "sel": ".upd-item::before",
+      "props": {
+        "width": "3px",
+        "height": "3px",
+        "border-radius": "50%",
+        "background-color": "rgba(184, 184, 184, 0.35)",
+        "position": "absolute",
+        "left": "2px",
+        "top": "7px"
+      },
+      "why": "불릿을 금색으로 하면 항목 수만큼 강조색이 반복돼 과해짐 — 본문색의 35% 점으로 중립 처리. top 7px는 16.5px 행 중앙 정렬값"
+    },
+    {
+      "sel": ".upd-foot",
+      "props": {
+        "display": "flex",
+        "align-items": "center",
+        "justify-content": "space-between",
+        "gap": "6px",
+        "margin-top": "8px",
+        "padding-top": "8px",
+        "border-top": "1px solid rgba(255, 255, 255, 0.08)"
+      },
+      "why": "margin/padding 8px + 구분선 = 기존 .cd-preset-sec(margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.08))와 완전히 동일한 섹션 분리 패턴"
+    },
+    {
+      "sel": ".upd-more",
+      "props": { "font-size": "10px", "color": "rgb(119, 119, 119)", "text-decoration-line": "none" },
+      "why": "보조 링크라 #777 안내문구 톤. 버튼처럼 보이지 않게 의도적으로 약하게"
+    },
+    {
+      "sel": ".upd-ok",
+      "props": {
+        "padding": "4px 14px",
+        "background-color": "rgba(255, 255, 255, 0.08)",
+        "color": "rgb(184, 184, 184)",
+        "border": "1px solid rgba(255, 255, 255, 0.15)",
+        "border-radius": "5px",
+        "font-size": "11px",
+        "cursor": "pointer"
+      },
+      "why": "기존 .cd-btns button과 동일 스펙(padding만 4px 10px→4px 14px로 넓힘, 단독 버튼이라). 금색 채움 버튼으로 만들지 않은 이유 = 위젯 크기 대비 과함"
+    },
+    {
+      "sel": ".upd-ok:hover",
+      "props": { "background-color": "rgba(255, 255, 255, 0.14)" },
+      "why": "기존 .cd-preset:hover와 동일한 0.14"
+    },
+    {
+      "sel": ".upd-shell--modal",
+      "props": {
+        "position": "absolute",
+        "display": "flex",
+        "align-items": "center",
+        "justify-content": "center",
+        "background-color": "rgba(0, 0, 0, 0.55)",
+        "z-index": "9000"
+      },
+      "why": "포팅용 셸. K-Clock에서는 사용하지 않음(구현 시 이 규칙은 넣어도 되고 빼도 됨 — 다른 앱 포팅 때 함께 이동)",
+      "kclock_required": false
+    },
+    {
+      "sel": ".upd-shell--modal .upd-card",
+      "props": {
+        "width": "360px",
+        "padding": "14px",
+        "border-radius": "10px",
+        "background-color": "rgb(30, 30, 30)",
+        "border": "1px solid rgba(255, 255, 255, 0.12)"
+      },
+      "why": "#1e1e1e = 기존 .cdd-list / select option 배경과 동일한 '떠 있는 면' 색. border-radius 10px = 기존 .panel과 동일",
+      "kclock_required": false
+    }
+  ],
+
+  "css_unchanged": {
+    "why": "기존 규칙은 한 글자도 바뀌면 안 됨(회귀 방지). 소스 문자열 완전일치로 대조.",
+    "selectors": [
+      ".panel",
+      ".panel.open",
+      ".panel-title",
+      ".close-panel",
+      ".alarm-row",
+      ".alarm-list",
+      ".alarm-item",
+      ".alarm-toggle",
+      ".alarm-toggle.on",
+      ".alarm-del",
+      ".btn-add",
+      ".btn-repeat",
+      ".btn-repeat.active",
+      ".empty-msg",
+      ".cd-row",
+      "#cd-display",
+      ".cd-btns",
+      ".cd-btns button",
+      ".cd-save-btn",
+      ".cd-preset",
+      ".cd-preset-sec",
+      ".cd-hint",
+      ".setting-row",
+      ".toggle",
+      ".cdd",
+      ".cdd-btn",
+      ".cdd-list",
+      ".cdd-item",
+      ".color-btn",
+      "#ctx-menu",
+      ".menu-item"
+    ]
+  },
+
+  "dom": [
+    {
+      "id": "dom-1",
+      "assert": "#panel-update가 기존 3개 패널과 형제로 #clock-area 안에 존재",
+      "type": "count",
+      "sel": "#clock-area > #panel-update",
+      "expect": 1
+    },
+    {
+      "id": "dom-2",
+      "assert": "#panel-update는 기존 패널과 동일하게 .panel 클래스를 사용(신규 셸 클래스 도입 없음)",
+      "type": "expr",
+      "expr": "document.getElementById('panel-update').classList.contains('panel')",
+      "expect": true
+    },
+    {
+      "id": "dom-3",
+      "assert": "패널 개수는 기존 3개 + 신규 1개 = 4개",
+      "type": "count",
+      "sel": "#clock-area .panel",
+      "expect": 4
+    },
+    {
+      "id": "dom-4",
+      "assert": "기존 3개 패널 id가 그대로 존재",
+      "type": "expr",
+      "expr": "['panel-alarm','panel-countdown','panel-settings'].every(i=>!!document.getElementById(i))",
+      "expect": true
+    },
+    {
+      "id": "dom-5",
+      "assert": "#panel-update 안에 .panel-title / .close-panel / .upd-card 각 1개",
+      "type": "expr",
+      "expr": "['.panel-title','.close-panel','.upd-card'].every(s=>document.querySelectorAll('#panel-update '+s).length===1)",
+      "expect": true
+    },
+    {
+      "id": "dom-6",
+      "assert": "카드 내부 구조: .upd-head / .upd-body / .upd-foot 각 1개",
+      "type": "expr",
+      "expr": "['.upd-head','.upd-body','.upd-foot'].every(s=>document.querySelectorAll('#panel-update '+s).length===1)",
+      "expect": true
+    },
+    {
+      "id": "dom-7",
+      "assert": "버전 배지 텍스트가 실행 중인 APP_VERSION과 일치",
+      "type": "expr",
+      "expr": "document.querySelector('#panel-update .upd-badge').textContent === 'v'+APP_VERSION",
+      "expect": true
+    },
+    {
+      "id": "dom-8",
+      "assert": "각 버전 블록은 .upd-ver-num / .upd-ver-date / .upd-list를 갖는다",
+      "type": "expr",
+      "expr": "[...document.querySelectorAll('#panel-update .upd-ver')].every(v=>v.querySelector('.upd-ver-num')&&v.querySelector('.upd-ver-date')&&v.querySelector('.upd-list'))",
+      "expect": true
+    },
+    {
+      "id": "dom-9",
+      "assert": "마지막 버전 블록은 하단 구분선 없음(푸터 구분선과 겹치지 않게)",
+      "type": "expr",
+      "expr": "getComputedStyle(document.querySelector('#panel-update .upd-ver:last-child')).borderBottomStyle",
+      "expect": "none"
+    },
+    {
+      "id": "dom-10",
+      "assert": "첫 버전 블록은 상단 여백 0(헤더와의 간격은 .upd-head margin-bottom이 담당)",
+      "type": "expr",
+      "expr": "getComputedStyle(document.querySelector('#panel-update .upd-ver:first-child')).paddingTop",
+      "expect": "0px"
+    },
+    {
+      "id": "dom-11",
+      "assert": "changelog 항목은 마크다운 파싱 없이 텍스트로만 들어간다(항목 안에 자식 엘리먼트 0개)",
+      "type": "expr",
+      "expr": "[...document.querySelectorAll('#panel-update .upd-item')].every(li=>li.children.length===0)",
+      "expect": true
+    },
+    {
+      "id": "dom-12",
+      "assert": "보조 링크는 새 창으로 열리고 opener 누수 없음",
+      "type": "expr",
+      "expr": "(a=>a.target==='_blank'&&a.rel.includes('noopener'))(document.querySelector('#panel-update .upd-more'))",
+      "expect": true
+    }
+  ],
+
+  "layout": [
+    {
+      "id": "lay-1",
+      "assert": "패널 폭 정확히 300px (기존 패널과 동일 — syncWindowWidth의 panelEl?300:0 가정을 깨지 않음)",
+      "expr": "document.getElementById('panel-update').getBoundingClientRect().width",
+      "expect": 300
+    },
+    {
+      "id": "lay-2",
+      "assert": "패널 안 가로 스크롤 없음",
+      "expr": "(e=>e.scrollWidth<=e.clientWidth)(document.getElementById('panel-update'))",
+      "expect": true
+    },
+    {
+      "id": "lay-3",
+      "assert": "버전 3개(항목 8줄) 최대 상황에서도 패널 높이가 300px를 넘지 않는다 — 300px 폭 위젯이 세로로만 길어지는 걸 방지",
+      "expr": "document.getElementById('panel-update').getBoundingClientRect().height <= 300",
+      "expect": true,
+      "measured": 291
+    },
+    {
+      "id": "lay-4",
+      "assert": "내용이 max-height를 넘으면 패널이 커지는 게 아니라 .upd-body가 스크롤된다",
+      "steps": ["UPDATE_NOTES 3개 버전(총 8항목) 렌더"],
+      "expr": "(e=>e.scrollHeight>e.clientHeight)(document.querySelector('#panel-update .upd-body'))",
+      "expect": true
+    },
+    {
+      "id": "lay-5",
+      "assert": "항목이 적을 때(신규 설치 모드, 2버전 6항목)도 동일 컴포넌트로 자연스럽게 줄어든다",
+      "expr": "document.getElementById('panel-update').getBoundingClientRect().height <= 300",
+      "expect": true
+    },
+    {
+      "id": "lay-6",
+      "assert": "제목 '텍스트'가 닫기 ✕ 버튼과 겹치지 않는다",
+      "expr": "(()=>{const el=document.querySelector('#panel-update .panel-title');const r=document.createRange();r.selectNodeContents(el);const t=r.getBoundingClientRect();const c=document.querySelector('#panel-update .close-panel').getBoundingClientRect();return t.right<=c.left;})()",
+      "expect": true,
+      "note": ".panel-title은 기존 패널에서도 full-width div라 '박스' 기준으로 비교하면 항상 겹침으로 나온다(기존 알람/설정 패널도 동일) — Range로 실제 텍스트 폭을 재야 의미 있는 검사가 된다. 실측: 텍스트 right 294 vs 닫기 left 484"
+    },
+    {
+      "id": "lay-7",
+      "assert": "닫기 ✕ 버튼 위치가 기존 패널과 동일(패널 기준 top 8px / 오른쪽 여백 10px) — .close-panel 규칙을 그대로 상속했는지 확인",
+      "expr": "(()=>{const p=document.getElementById('panel-update').getBoundingClientRect(),c=document.querySelector('#panel-update .close-panel').getBoundingClientRect();return [Math.round(c.top-p.top),Math.round(p.right-c.right)];})()",
+      "expect": [8, 10]
+    },
+    {
+      "id": "lay-8",
+      "assert": "카드 헤더(.upd-head)가 닫기 버튼과 겹치지 않는다",
+      "expr": "(()=>{const h=document.querySelector('#panel-update .upd-head').getBoundingClientRect(),c=document.querySelector('#panel-update .close-panel').getBoundingClientRect();return !(h.top>c.bottom||h.bottom<c.top||h.right<c.left||h.left>c.right);})()",
+      "expect": false
+    }
+  ],
+
+  "behavior": [
+    {
+      "id": "beh-1",
+      "assert": "신규 설치(저장소 완전히 비어있음) → fresh 모드, 최신 2개 버전만",
+      "steps": ["localStorage.clear()", "updDecide()"],
+      "expect": { "mode": "fresh", "notes.length": 2 }
+    },
+    {
+      "id": "beh-2",
+      "assert": "기존 유저 최초 도입(lastSeen 없음 + 기존 앱 데이터 있음) → fresh가 아니라 update 모드. 파일럿 첫 배포 때 기존 유저 전원이 이 경로를 탄다",
+      "steps": ["localStorage.clear()", "localStorage.setItem('alarms','[]')", "updDecide()"],
+      "expect": { "mode": "update", "notes.length": 3 }
+    },
+    {
+      "id": "beh-3",
+      "assert": "레거시 판별은 alarms/cdPresets/panelColor/panelOpacity 중 하나만 있어도 성립",
+      "steps": ["각 키를 단독으로 넣고 updDecide() 4회"],
+      "expect": { "mode": "update (4회 모두)" }
+    },
+    {
+      "id": "beh-4",
+      "assert": "이미 본 버전(lastSeen === 현재 버전) → 표시하지 않음",
+      "steps": ["localStorage.setItem('kclock.updateNotice.lastSeen','1.3.9')", "updDecide()"],
+      "expect": { "return": null }
+    },
+    {
+      "id": "beh-5",
+      "assert": "한 버전 건너뜀(lastSeen=1.3.8, 현재 1.3.9) → 1개 버전만",
+      "expect": { "mode": "update", "notes.length": 1 }
+    },
+    {
+      "id": "beh-6",
+      "assert": "여러 버전 건너뜀(lastSeen=1.3.7) → 건너뛴 버전 전부(2개) 함께 표시",
+      "expect": { "mode": "update", "notes.length": 2 }
+    },
+    {
+      "id": "beh-7",
+      "assert": "아주 오래된 버전(lastSeen=1.2.0) → UPD_MAX_VERS(3)개로 상한. 패널이 무한정 길어지지 않게",
+      "expect": { "mode": "update", "notes.length": 3 }
+    },
+    {
+      "id": "beh-8",
+      "assert": "다운그레이드(lastSeen=1.4.5 > 현재 1.3.9) → 표시하지 않음",
+      "expect": { "return": null }
+    },
+    {
+      "id": "beh-9",
+      "assert": "테스트빌드를 본 뒤 정식판 설치(lastSeen=1.3.9-1, 현재 1.3.9) → 표시함. K-앱 테스트빌드 규칙(X.Y.Z-N)에서 프리릴리즈는 정식판보다 낮다",
+      "expect": { "mode": "update", "notes.length": 1 }
+    },
+    {
+      "id": "beh-10",
+      "assert": "updCmpVersion 정확성",
+      "cases": [
+        ["1.3.9", "1.3.8", 1],
+        ["1.3.9", "1.3.9", 0],
+        ["1.3.9", "1.3.9-1", 1],
+        ["1.3.9-1", "1.3.9", -1],
+        ["1.4.0", "1.3.99", 1],
+        ["1.10.0", "1.9.0", 1],
+        ["2.0.0", "1.99.99", 1],
+        ["1.3.9-2", "1.3.9-1", 1]
+      ],
+      "note": "문자열 비교가 아니라 세그먼트 숫자 비교 — 1.10.0 > 1.9.0 이 반드시 참이어야 함"
+    },
+    {
+      "id": "beh-11",
+      "assert": "'봤음' 기록 시점은 표시 순간이 아니라 닫는 순간. 띄운 직후 앱이 죽으면 못 읽고 사라지는 걸 방지",
+      "steps": ["updDecide() → 표시됨", "updMarkSeen()", "updDecide() 재호출"],
+      "expect": { "before": "표시됨", "after": null, "stored": "1.3.9" }
+    },
+    {
+      "id": "beh-12",
+      "assert": "닫기 경로 3개 모두 '봤음'으로 기록된다: ✕ 버튼 / 확인 버튼 / 다른 패널 열기(openPanel)",
+      "expect": { "kclock.updateNotice.lastSeen": "1.3.9 (3경로 모두)" }
+    },
+    {
+      "id": "beh-13",
+      "assert": "changelog 데이터가 비어 있으면 빈 카드를 띄우지 않고 조용히 미표시",
+      "steps": ["UPDATE_NOTES=[]", "updDecide()"],
+      "expect": { "return": null }
+    },
+    {
+      "id": "beh-14",
+      "assert": "localStorage 접근 자체가 실패해도(예외) 앱이 죽지 않고 조용히 미표시",
+      "steps": ["localStorage.getItem이 throw 하도록 스텁", "updDecide()"],
+      "expect": { "return": null, "throws": false }
+    },
+    {
+      "id": "beh-15",
+      "assert": "changelog 텍스트는 HTML로 해석되지 않는다(이스케이프)",
+      "steps": ["items에 '<b>x</b>' 포함해서 렌더"],
+      "expect": { "upd-item.textContent": "<b>x</b>", "upd-item.children.length": 0 }
+    },
+    {
+      "id": "beh-16",
+      "assert": "표시 데이터는 네트워크가 아니라 앱 번들 내 UPDATE_NOTES에서 온다 — 오프라인에서도 뜨고, update/latest.json fetch에 의존하지 않는다",
+      "expect": { "network_calls_on_show": 0 }
+    },
+    {
+      "id": "beh-17",
+      "assert": "저장 키는 앱 네임스페이스를 가진다(포팅 시 앱별 충돌 방지)",
+      "expr": "UPD_KEY_SEEN",
+      "expect": "kclock.updateNotice.lastSeen"
+    },
+    {
+      "id": "beh-18",
+      "assert": "외부 링크 훅이 주입돼 있으면 클릭 시 훅이 호출되고 앵커 기본 동작은 막힌다",
+      "steps": ["UPD_OPEN_EXTERNAL = u => { called = u }", "click .upd-more"],
+      "expect": { "called": "UPD_MORE_URL", "defaultPrevented": true },
+      "critical": true
+    },
+    {
+      "id": "beh-19",
+      "assert": "훅이 없으면(일반 브라우저/시안) 앵커 기본 동작을 그대로 둔다 — 훅 미주입이 링크를 죽이지 않는다",
+      "steps": ["UPD_OPEN_EXTERNAL = null", "click .upd-more"],
+      "expect": { "defaultPrevented": false }
+    },
+    {
+      "id": "beh-20",
+      "assert": "훅이 예외를 던져도 안내 UI가 죽지 않는다",
+      "steps": ["UPD_OPEN_EXTERNAL = () => { throw new Error('x') }", "click .upd-more"],
+      "expect": { "throws": false }
+    },
+    {
+      "id": "beh-21",
+      "assert": "K-Clock 실기에서 '전체 변경 내역' 클릭 시 시스템 기본 브라우저가 실제로 열린다(훅 주입 후). 형이 Windows에서 확인하는 항목",
+      "expect": { "opens_system_browser": true },
+      "manual": true,
+      "critical": true
+    }
+  ],
+
+  "regression": [
+    {
+      "id": "reg-1",
+      "assert": "알람 패널 DOM·CSS·동작 변화 0건 (추가/삭제/토글/드래그정렬/편집저장/반복)"
+    },
+    {
+      "id": "reg-2",
+      "assert": "카운트다운 패널 DOM·CSS·동작 변화 0건 (시작/일시정지/초기화/프리셋 저장·클릭·더블클릭·삭제)"
+    },
+    {
+      "id": "reg-3",
+      "assert": "설정 패널 DOM·CSS·동작 변화 0건 (자동시작/항상위/초표시/스타일/크기/밝기/패널투명도/패널색상)"
+    },
+    {
+      "id": "reg-4",
+      "assert": "syncWindowWidth() 본문 변경 0줄. #panel-update는 폭 300px .panel이라 기존 'panelEl?300:0' + 'panelEl.offsetHeight' 계산이 수정 없이 그대로 적용된다"
+    },
+    {
+      "id": "reg-5",
+      "assert": "openPanel()/closePanel()에 추가되는 코드는 각각 '봤음' 기록 1줄뿐(if(isUpdateNoticeOpen())updMarkSeen();). 기존 라인은 순서·내용 모두 불변",
+      "critical": true
+    },
+    {
+      "id": "reg-6",
+      "assert": "항상 위(alwaysOnTop) 유지 로직·500ms refresh_always_on_top 인터벌에 영향 없음. 안내 패널은 같은 창 안 DOM이라 별도 네이티브 창을 만들지 않는다",
+      "critical": true
+    },
+    {
+      "id": "reg-7",
+      "assert": "드래그 이동 유지 — clock-area mousedown 가드의 e.target.closest('...,.panel,...')에 이미 .panel이 포함돼 있어 안내 패널 위 클릭이 창 드래그로 새지 않는다"
+    },
+    {
+      "id": "reg-8",
+      "assert": "우클릭 메뉴(#ctx-menu) 동작·크기 계산 영향 없음"
+    },
+    {
+      "id": "reg-9",
+      "assert": "커스텀 드롭다운(.cdd-list) z-index 50과 충돌 없음 — 안내는 패널 내부 흐름 요소라 z-index를 쓰지 않는다"
+    },
+    {
+      "id": "reg-10",
+      "assert": "기존 localStorage 키(alarms/cdPresets/panelColor/panelOpacity)는 읽기만 하고 쓰지 않는다",
+      "critical": true
+    },
+    {
+      "id": "reg-11",
+      "assert": "패널 색상 '흰색' 설정에서도 기존 패널들과 동일한 대비 수준을 유지한다(본문색 #b8b8b8을 기존 패널과 똑같이 물려받음 — 이 컴포넌트만 따로 튀지 않는지 확인. 기존 흰색 패널의 대비 문제 자체는 별건이며 이번 범위 아님)"
+    },
+    {
+      "id": "reg-12",
+      "assert": "알람 울리는 중(flashing) 상태에서 안내가 알람 정지 클릭을 가로채지 않는다"
+    }
+  ],
+
+  "porting": {
+    "principle": "카드는 순수 HTML/CSS/JS를 유지하되, 환경마다 답이 다른 지점은 '수단'을 하드코딩하지 않고 호스트가 주입하는 훅으로 뺀다. 현재 훅은 외부 링크 열기 1개뿐.",
+    "hooks": [
+      {
+        "name": "UPD_OPEN_EXTERNAL",
+        "signature": "(url: string) => void",
+        "default": null,
+        "fallback": "null이면 <a target=\"_blank\"> 기본 동작(브라우저에서만 올바름)"
+      }
+    ],
+    "adapters": {
+      "K-Clock (Tauri)": "UPD_OPEN_EXTERNAL = url => invoke('open_url',{url});  // main.rs에 open_url 커맨드 추가 필요",
+      "K-Music": "UPD_OPEN_EXTERNAL = url => window.api.openExternal(url);  // 이미 존재(preload.js:6)",
+      "K-Memo": "UPD_OPEN_EXTERNAL = url => window.api.openExternal(url);  // shell.openExternal 경로 존재(main.js:2193)",
+      "K-Tube": "preload에 openExternal 노출 후 한 줄",
+      "K-Zone": "preload에 openExternal 노출 후 한 줄"
+    },
+    "evidence_target_blank_is_not_neutral": [
+      {
+        "app": "K-Clock",
+        "finding": "tauri 2.11.3이 new_window_req_handler를 등록하지 않음 → wry 0.55.1이 None으로 두고 webview2 백엔드가 else 분기에서 args.SetHandled(true)만 하고 종료(wry-0.55.1/src/webview2/mod.rs:782). 결과는 '아무 일도 안 일어남' — 가능성이 아니라 확정된 죽은 링크.",
+        "severity": "치명"
+      },
+      {
+        "app": "K-Tube",
+        "finding": "setWindowOpenHandler가 모든 target=_blank를 유튜브 watch/channel 정규식으로 먼저 분기(main.js:199-209). 지금은 우연히 else의 shell.openExternal로 빠지지만, 링크 URL이 그 패턴에 걸리면 '변경 내역' 클릭이 영상 재생으로 새어나간다.",
+        "severity": "취약한 결합"
+      },
+      {
+        "app": "K-Memo / K-Music / K-Zone",
+        "finding": "Electron 31에서 setWindowOpenHandler 미설정 시 target=_blank는 새 BrowserWindow로 원격 페이지를 앱 안에 띄운다(뒤로가기도 없는 미니 브라우저에 갇힘). K-Music은 이미 이 문제를 피해 window.api.openExternal + main.rs측 /^https:\\/\\// 가드를 쓰고 있음.",
+        "severity": "UX 불량 + 보안 냄새"
+      }
+    ],
+    "conclusion": "<a target=\"_blank\">는 '프레임워크 중립'이 아니라 '브라우저라는 특정 런타임을 가정한 하드코딩'이었다. 5개 대상 환경 어디에서도 그대로는 맞지 않는다. 훅 주입이 더 중립적이고, 앱별 비용도 인터셉터 작성 → 한 줄 대입으로 줄어든다."
+  },
+
+  "theme": {
+    "kclock_light_needed": false,
+    "why": "K-Clock은 투명·무테 오버레이 위젯이라 OS 라이트/다크 개념이 적용되지 않는다(창 배경이 없음). 유일한 밝기 축인 '패널 색상 검정/흰색' 옵션은 .panel의 background만 바꾸고 전경색은 기존 패널 전부가 #b8b8b8로 고정돼 있어서, 이 컴포넌트도 같은 토큰을 그대로 물려받으면 기존과 정확히 같은 톤이 된다 — 별도 라이트 분기를 만들면 오히려 이 카드만 다르게 보임.",
+    "modal_light_defined": true,
+    "modal_light_why": "반면 K-Memo/K-Tube 등 포팅 대상 앱은 실제 라이트 모드가 있으므로 .upd-shell--modal에 한해 라이트 토큰을 정의해 뒀다. prefers-color-scheme 기본 + :root[data-theme] 스탬프가 양방향으로 이기게 처리."
+  },
+
+  "open_questions": [
+    {
+      "q": "NSIS 업그레이드 설치 후 WebView2 localStorage가 보존되는가",
+      "status": "기존 동작으로 이미 확인됨 — 알람/프리셋/설정이 지금도 업데이트를 넘어 유지되고 있고 같은 저장소를 쓴다. 단, 제거 시 '애플리케이션 데이터 삭제'를 체크하면 초기화되며 그 유저는 신규 설치로 취급되는 게 맞다.",
+      "blocking": false
+    },
+    {
+      "q": "UPDATE_NOTES와 update/latest.json의 notes를 한 소스에서 생성할지",
+      "status": "이번 범위 밖. 다만 배포 때 두 곳을 손으로 따로 채우면 어긋나므로, 릴리즈 스크립트가 한 원본에서 둘 다 채우도록 하는 걸 후속 과제로 권장.",
+      "blocking": false
+    }
+  ]
+}

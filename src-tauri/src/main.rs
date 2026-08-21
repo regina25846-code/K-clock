@@ -106,6 +106,31 @@ fn close_app(app: tauri::AppHandle) {
     app.exit(0);
 }
 
+// 업데이트 안내 카드의 "전체 변경 내역" 링크용 — 시스템 기본 브라우저로 연다.
+// Cargo.toml에 opener/shell 플러그인이 없어서 다른 커맨드들과 같은 방식(직접 프로세스 실행)으로 처리.
+// https:// 스킴만 허용(임의 프로토콜/로컬 파일 경로 실행 방지).
+#[tauri::command]
+fn open_url(url: String) -> Result<(), String> {
+    if !url.starts_with("https://") {
+        return Err("invalid_scheme".into());
+    }
+    #[cfg(windows)]
+    {
+        std::process::Command::new("cmd")
+            .args(["/C", "start", "", &url])
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&url)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 #[tauri::command]
 fn hide_window(window: tauri::Window) {
     let _ = window.hide();
@@ -330,6 +355,7 @@ fn main() {
             set_always_on_top,
             minimize_window,
             close_app,
+            open_url,
             hide_window,
             set_window_height,
             set_window_size,

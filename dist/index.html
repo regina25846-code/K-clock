@@ -610,7 +610,7 @@ function saveAlarmEdit(id){
   const t=document.getElementById('edit-time-'+id).value;
   const name=document.getElementById('edit-name-'+id).value.trim()||'알람';
   if(!t) return;
-  a.t=t; a.name=name; a.repeat=editingRepeat;
+  a.t=t; a.name=name; a.repeat=editingRepeat; a.enabled=true;
   editingAlarmId=null;
   saveAlarms();
   renderAlarms();
@@ -629,7 +629,7 @@ function renderAlarms(){
     div.className='alarm-item';
     div.style.color=c;
     if(a.id===editingAlarmId){
-      div.innerHTML=`<input type="time" id="edit-time-${a.id}" value="${a.t}"><input type="text" id="edit-name-${a.id}" value="${a.name}" placeholder="이름"><button class="alarm-edit-btn ${editingRepeat?'active':''}" onclick="toggleEditRepeat()" title="매일 반복">${repeatIconSvg}</button><button class="alarm-edit-btn" onclick="saveAlarmEdit(${a.id})" title="저장">✓</button><button class="alarm-edit-btn" onclick="cancelAlarmEdit()" title="취소">✕</button>`;
+      div.innerHTML=`<input type="time" id="edit-time-${a.id}" value="${a.t}" onkeydown="if(event.key==='Enter')saveAlarmEdit(${a.id})"><input type="text" id="edit-name-${a.id}" value="${a.name}" placeholder="이름" onkeydown="if(event.key==='Enter')saveAlarmEdit(${a.id})"><button class="alarm-edit-btn ${editingRepeat?'active':''}" onclick="toggleEditRepeat()" title="매일 반복">${repeatIconSvg}</button><button class="alarm-edit-btn" onclick="saveAlarmEdit(${a.id})" title="저장">✓</button><button class="alarm-edit-btn" onclick="cancelAlarmEdit()" title="취소">✕</button>`;
       list.appendChild(div);
       return;
     }

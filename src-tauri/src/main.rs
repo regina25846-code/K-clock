@@ -227,16 +227,25 @@ fn close_about(app: tauri::AppHandle) {
     }
 }
 
+// About 창 다크/라이트 자동전환용 — K-Clock엔 다크/라이트 토글이 없고 "밝기"(0~255)
+// 슬라이더만 있어서, 프론트에서 슬라이더 바뀔 때마다 set_brightness로 이 값을 갱신해두고
+// About 창을 열 때 그 값을 쿼리파라미터로 넘긴다(about.html이 127 이하면 다크로 렌더).
 #[tauri::command]
-fn open_about(app: tauri::AppHandle) {
+fn set_brightness(state: tauri::State<std::sync::Mutex<u8>>, value: u8) {
+    *state.lock().unwrap() = value;
+}
+
+#[tauri::command]
+fn open_about(app: tauri::AppHandle, brightness: tauri::State<std::sync::Mutex<u8>>) {
     if let Some(win) = app.get_webview_window("about") {
         let _ = win.set_focus();
         return;
     }
+    let b = *brightness.lock().unwrap();
     let _ = tauri::WebviewWindowBuilder::new(
         &app,
         "about",
-        tauri::WebviewUrl::App(format!("about.html?v={}", env!("CARGO_PKG_VERSION")).into()),
+        tauri::WebviewUrl::App(format!("about.html?v={}&b={}", env!("CARGO_PKG_VERSION"), b).into()),
     )
     .title("프로그램 정보")
     .inner_size(340.0, 450.0)
@@ -275,6 +284,7 @@ async fn check_for_update(app: tauri::AppHandle) -> Result<Option<String>, Strin
 
 fn main() {
     tauri::Builder::default()
+        .manage(std::sync::Mutex::new(220u8))
         .plugin(tauri_plugin_window_state::Builder::default()
             .with_state_flags(tauri_plugin_window_state::StateFlags::POSITION | tauri_plugin_window_state::StateFlags::SIZE)
             .build())
@@ -367,6 +377,7 @@ fn main() {
             get_autostart,
             open_about,
             close_about,
+            set_brightness,
             check_for_update,
             refresh_always_on_top,
             list_system_sounds,

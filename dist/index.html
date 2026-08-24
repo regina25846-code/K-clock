@@ -611,6 +611,10 @@ async function changeSize(v){
 
 function changeBrightness(v){
   brightness=Math.round(Number(v));
+  // About 창을 다크/라이트 자동전환하려고 Rust 쪽에 현재 밝기값을 계속 동기화해둔다
+  // (About 창은 별도 웹뷰라 여기 변수를 직접 못 읽어서, open_about이 열릴 때 이 값을
+  // 쿼리파라미터로 넘겨받는 방식 — 실패해도 무해하니 에러는 무시).
+  if (window.__TAURI__) window.__TAURI__.core.invoke('set_brightness', { value: brightness }).catch(()=>{});
   const hex=brightness.toString(16).padStart(2,'0');
   const c='#'+hex+hex+hex;
   document.getElementById('seg-wrap').querySelectorAll('.seg,.dot').forEach(s=>s.style.background=c);

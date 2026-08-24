@@ -252,6 +252,10 @@ fn open_about(app: tauri::AppHandle, brightness: tauri::State<std::sync::Mutex<u
     .resizable(false)
     .decorations(false)
     .transparent(true)
+    // 메인 시계창(tauri.conf.json)엔 이미 shadow:false가 있는데 여기(Rust로 동적 생성하는
+    // 창)엔 빠져있었음 — Windows 기본 각진 창 그림자가 새로 그린 둥근 CSS 그림자와 겹쳐서
+    // 카드 옆으로 각진 그림자가 튀어나와 보이는 원인(2026-08-24 형 실기 확인으로 발견).
+    .shadow(false)
     .always_on_top(true)
     .skip_taskbar(true)
     .center()

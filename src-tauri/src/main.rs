@@ -248,7 +248,11 @@ fn open_about(app: tauri::AppHandle, brightness: tauri::State<std::sync::Mutex<u
         tauri::WebviewUrl::App(format!("about.html?v={}&b={}", env!("CARGO_PKG_VERSION"), b).into()),
     )
     .title("프로그램 정보")
-    .inner_size(340.0, 450.0)
+    // 카드 320px + about.html의 body padding(좌우 28px) = 376.
+    // 그림자가 창 밖으로 나가면 OS 창 경계에서 직선으로 잘려 모서리가 각져 보이므로
+    // 창은 반드시 카드보다 그림자 여백만큼 커야 한다(2026-08-25).
+    // 높이는 로드 직후 syncAboutHeight()가 실측값으로 다시 맞춘다.
+    .inner_size(376.0, 525.0)
     .resizable(false)
     .decorations(false)
     .transparent(true)

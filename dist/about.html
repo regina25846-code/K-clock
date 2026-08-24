@@ -101,6 +101,10 @@ body{
 .pane{
   position:relative;z-index:2;flex:1;
   display:flex;flex-direction:column;
+  /* backdrop-filter가 부모(.dlg)의 border-radius+overflow:hidden 클립을 안 따라가고
+     각지게 새는 렌더러가 있어서(2026-08-24 형 Windows 실기로 발견), .pane 자신에게도
+     같은 반경+클립을 직접 줘서 backdrop-filter 레이어 자체가 둥글게 잘리도록 함. */
+  border-radius:20px;overflow:hidden;
   background:
     linear-gradient(180deg,var(--sheen) 0%,transparent 34%),
     var(--glass);

@@ -327,7 +327,7 @@ fn main() {
                         }
                     }
                     "info" => {
-                        open_about(app.clone());
+                        open_about(app.clone(), app.state::<std::sync::Mutex<u8>>());
                     }
                     _ => {}
                 })

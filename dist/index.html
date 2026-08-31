@@ -262,6 +262,13 @@ select option { background:#1e1e1e; color:#b8b8b8; }
     <div class="setting-row"><span>항상 위</span><div class="toggle" id="tog-pin" onclick="toggleAlwaysOnTop()"></div></div>
     <div class="setting-row"><span>초 표시</span><div class="toggle" id="tog-sec" onclick="toggleSec()"></div></div>
     <div class="setting-row">
+      <span>표시 시간대</span>
+      <div class="cdd" id="tz-dd">
+        <button type="button" class="cdd-btn" id="tz-dd-btn" onclick="toggleDropdown('tz-dd')">시스템 시간</button>
+        <div class="cdd-list" id="tz-dd-list"></div>
+      </div>
+    </div>
+    <div class="setting-row">
       <span>스타일/폰트</span>
       <div class="cdd" id="style-dd">
         <button type="button" class="cdd-btn" id="style-dd-btn" onclick="toggleDropdown('style-dd')">KoPubWorld Bold</button>
@@ -341,21 +348,56 @@ function toggleRepeatBtn(){
   document.getElementById('btn-repeat').classList.toggle('active',repeatMode);
 }
 
+// ── 표시 시간대 ──
+// PC 시스템 시간대와 무관하게 K-Clock에서만 특정 지역 시간을 표시하는 기능(2026-08-31 추가).
+// 고정 오프셋(+9시간처럼 숫자로 더하기) 대신 IANA 시간대 이름 + Intl.DateTimeFormat을 쓰는 이유는
+// 서머타임(뉴욕/런던 등)이 자동으로 반영돼야 하기 때문 — WebView2(크로미움)는 전체 ICU를 포함해서
+// 시간대 목록을 앱에 따로 번들하지 않아도 된다. Intl이 실패하면 조용히 시스템 시간으로 되돌아간다.
+let clockTz='system';
+let tzFmt=null;
+// 성공적으로 v로 설정됐으면 true, 실패해서 시스템 시간으로 되돌아갔으면 false.
+function setClockTz(v){
+  if(!v || v==='system'){ clockTz='system'; tzFmt=null; return true; }
+  try{
+    const f=new Intl.DateTimeFormat('en-GB',{timeZone:v,hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+    f.format(new Date()); // 잘못된 시간대 이름은 여기서(또는 생성 시) 예외를 던진다
+    tzFmt=f; clockTz=v; return true;
+  }catch(e){ tzFmt=null; clockTz='system'; return false; }
+}
+// 시계가 실제로 그릴 시/분/초. 시간대 설정이 '시스템 시간'이면 기존과 완전히 동일하게 동작한다.
+function clockParts(){
+  const d=new Date();
+  if(!tzFmt) return {h:d.getHours(),m:d.getMinutes(),s:d.getSeconds()};
+  try{
+    let h=0,m=0,s=0;
+    tzFmt.formatToParts(d).forEach(p=>{
+      if(p.type==='hour') h=parseInt(p.value,10);
+      else if(p.type==='minute') m=parseInt(p.value,10);
+      else if(p.type==='second') s=parseInt(p.value,10);
+    });
+    // 일부 엔진은 hour12:false를 h24(자정을 '24'로 표기)로 해석하므로 방어적으로 보정
+    if(h===24) h=0;
+    return {h,m,s};
+  }catch(e){ return {h:d.getHours(),m:d.getMinutes(),s:d.getSeconds()}; }
+}
+
 function upd(){
-  const n=new Date();
-  sn(ph,n.getHours());sn(pm,n.getMinutes());
-  if(showSec) sn(ps,n.getSeconds());
-  const h=String(n.getHours()).padStart(2,'0');
-  const mi=String(n.getMinutes()).padStart(2,'0');
-  const sc=String(n.getSeconds()).padStart(2,'0');
+  const t=clockParts();
+  sn(ph,t.h);sn(pm,t.m);
+  if(showSec) sn(ps,t.s);
+  const h=String(t.h).padStart(2,'0');
+  const mi=String(t.m).padStart(2,'0');
+  const sc=String(t.s).padStart(2,'0');
   txtClock.textContent=showSec?`${h}:${mi}:${sc}`:`${h}:${mi}`;
   const hm=`${h}:${mi}`;
-  alarms.forEach(a=>{if(a.enabled&&a.t===hm&&n.getSeconds()===0){triggerAlarm(a.sound);if(!a.repeat){a.enabled=false;saveAlarms();renderAlarms();}}});
+  // 알람은 "화면에 보이는 시각" 기준으로 울린다 — 시간대를 한국으로 맞춰놓고 09:00 알람을
+  // 걸면 화면이 09:00을 가리킬 때 울리는 게 직관적이라서(2026-08-31 표시 시간대 도입 시 확정).
+  alarms.forEach(a=>{if(a.enabled&&a.t===hm&&t.s===0){triggerAlarm(a.sound);if(!a.repeat){a.enabled=false;saveAlarms();renderAlarms();}}});
 }
 setInterval(upd,1000);upd();
-changeStyle("'KoPubWorld Dotum Bold',sans-serif");
-changeSize(70);
-changeBrightness(220);
+// 크기/밝기/폰트/초표시/표시시간대의 실제 적용은 스크립트 맨 아래 restoreClockSettings()에서 한다 —
+// 예전엔 여기서 하드코딩 기본값(KoPubWorld Bold/70/220)을 무조건 적용해버려서, 저장 기능을 붙여도
+// 시작할 때마다 그 기본값으로 덮어써지는 구조였음(2026-08-31 저장 안 되는 버그의 직접 원인).
 // 로컬 @font-face(KoPubWorld 등)가 비동기로 로드되는 동안은 대체 폰트 기준 너비로 창이 잡히므로,
 // 폰트 로드 완료 후 한 번 더 실제 너비로 재보정(초기 반짝임/재조정 방지)
 if(document.fonts && document.fonts.ready) document.fonts.ready.then(syncWindowWidth);
@@ -377,6 +419,7 @@ function toggleSec(){
   showSec=!tog.classList.contains('off');
   document.getElementById('ds').style.display=showSec?'flex':'none';
   document.getElementById('colon2').style.display=showSec?'flex':'none';
+  lsSet(LS_SEC, showSec?'1':'0');
   upd();
   syncWindowWidth();
 }
@@ -480,7 +523,22 @@ function showInfo(){
   invoke('open_about');
 }
 
+// ── 설정 저장/복원 ──
+// 크기·밝기·폰트·초표시는 예전엔 저장 자체가 없어서(setItem 호출이 어디에도 없었음) 껐다 켜면
+// 항상 하드코딩 기본값으로 돌아갔음(형이 발견, 2026-08-31). 이미 정상 동작하던
+// panelOpacity/panelColor와 똑같이 localStorage에 개별 키로 저장한다.
+// 키 이름은 기존 키(alarms/cdPresets/panelColor/panelOpacity/kclock.updateNotice.lastSeen)와
+// 겹치지 않게 clock* 접두어를 쓴다.
+const LS_SIZE='clockSize', LS_BRIGHT='clockBrightness', LS_STYLE='clockStyle', LS_SEC='clockShowSec', LS_TZ='clockTz';
+const DEF_STYLE="'KoPubWorld Dotum Bold',sans-serif", DEF_STYLE_LABEL='KoPubWorld Bold';
+const DEF_SIZE=70, DEF_BRIGHT=220;
+// localStorage는 브라우저 설정/프로필 손상 등으로 예외를 던질 수 있어 항상 감싼다
+// (업데이트 안내 컴포넌트가 쓰던 것과 같은 방어 패턴).
+function lsSet(k,v){ try{ localStorage.setItem(k,String(v)); }catch(e){} }
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+
 function changeStyle(v){
+  lsSet(LS_STYLE, v);
   const seg=document.getElementById('seg-wrap');
   if(v==='7seg'){ seg.style.display='flex'; txtClock.style.display='none'; }
   else { seg.style.display='none'; txtClock.style.display='block'; txtClock.style.fontFamily=v; }
@@ -550,6 +608,41 @@ const STYLE_OPTIONS=[
     container.appendChild(item);
   });
 })();
+
+// 표시 시간대 목록 — IANA 이름이라 서머타임은 크로미움이 알아서 처리한다.
+// 라벨의 UTC 표기는 참고용이며(뉴욕/런던처럼 서머타임이 있는 곳은 두 값 병기), 실제 계산은
+// IANA 이름 기준이라 표기와 실제가 어긋날 일은 없다.
+const TZ_OPTIONS=[
+  ['system','시스템 시간'],
+  ['Asia/Seoul','한국 · 서울 (UTC+9)'],
+  ['Asia/Tokyo','일본 · 도쿄 (UTC+9)'],
+  ['Asia/Hong_Kong','홍콩 (UTC+8)'],
+  ['Asia/Dubai','두바이 (UTC+4)'],
+  ['Europe/London','런던 (UTC+0/+1)'],
+  ['America/New_York','뉴욕 (UTC-5/-4)'],
+  ['UTC','UTC (협정세계시)'],
+];
+(function buildTzDropdown(){
+  const container=document.getElementById('tz-dd-list');
+  TZ_OPTIONS.forEach(([v,label])=>{
+    const item=document.createElement('div');
+    item.className='cdd-item';
+    item.textContent=label;
+    item.addEventListener('click',()=>pickTz(v,label));
+    container.appendChild(item);
+  });
+})();
+function pickTz(v,label){
+  // 시간대 이름이 어떤 이유로든 거부되면(구형 웹뷰 등) 라벨까지 '시스템 시간'으로 되돌려서
+  // 표시와 실제 동작이 어긋나지 않게 한다.
+  const ok=setClockTz(v);
+  const eff = ok ? [v,label] : TZ_OPTIONS[0];
+  document.getElementById('tz-dd-btn').textContent=eff[1];
+  document.querySelector('#tz-dd .cdd-list').classList.remove('open');
+  lsSet(LS_TZ, eff[0]);
+  upd();
+  setTimeout(syncWindowWidth,10);
+}
 function pickSound(v,label,silent){
   document.getElementById('sound-dd-btn').textContent=label;
   document.getElementById('alarm-sound').value=v;
@@ -605,12 +698,18 @@ function previewSize(v){
   document.getElementById('size-val').textContent=v;
 }
 async function changeSize(v){
+  // 저장은 previewSize(슬라이더 드래그 중 매 틱)가 아니라 여기(onchange, 드래그를 놓은 시점)에서만 —
+  // 드래그 한 번에 localStorage 쓰기가 수십 번 도는 걸 피한다.
+  lsSet(LS_SIZE, v);
   previewSize(v);
   await syncWindowWidth();
 }
 
 function changeBrightness(v){
   brightness=Math.round(Number(v));
+  // 밝기는 슬라이더(oninput)뿐 아니라 시계 더블클릭 반전으로도 바뀌기 때문에, 두 경로가 모두
+  // 지나가는 이 함수에서 저장한다.
+  lsSet(LS_BRIGHT, brightness);
   // About 창을 다크/라이트 자동전환하려고 Rust 쪽에 현재 밝기값을 계속 동기화해둔다
   // (About 창은 별도 웹뷰라 여기 변수를 직접 못 읽어서, open_about이 열릴 때 이 값을
   // 쿼리파라미터로 넘겨받는 방식 — 실패해도 무해하니 에러는 무시).
@@ -1244,6 +1343,59 @@ syncSaveBtn();
   document.getElementById('btn-white').classList.toggle('active',c==='white');
   updatePanelBg();
 })();
+
+// 시계 설정 복원 (크기/밝기/폰트/초표시/표시시간대)
+// 예전엔 스크립트 위쪽에서 하드코딩 기본값을 바로 적용했는데, 여기로 옮긴 이유는 STYLE_OPTIONS /
+// TZ_OPTIONS가 const라 선언 전에는 참조할 수 없고(TDZ), 시간대 드롭다운 항목도 이 시점엔 이미
+// 만들어져 있어서 밝기 적용(.cdd-item 색상 일괄 지정)이 새 항목까지 함께 먹기 때문.
+function restoreClockSettings(){
+  // ① 초 표시 — 창 너비/높이를 재기 전에 확정돼야 시작 크기가 어긋나지 않는다
+  const savedSec=lsGet(LS_SEC);
+  showSec=(savedSec===null) ? true : (savedSec==='1');
+  document.getElementById('tog-sec').classList.toggle('off',!showSec);
+  document.getElementById('ds').style.display=showSec?'flex':'none';
+  document.getElementById('colon2').style.display=showSec?'flex':'none';
+
+  // ② 표시 시간대
+  const savedTz=lsGet(LS_TZ);
+  const tzOpt=TZ_OPTIONS.find(o=>o[0]===savedTz);
+  const tzEff=(tzOpt && setClockTz(tzOpt[0])) ? tzOpt : TZ_OPTIONS[0];
+  if(tzEff===TZ_OPTIONS[0]) setClockTz('system');
+  document.getElementById('tz-dd-btn').textContent=tzEff[1];
+
+  // ③ 크기/밝기 — 저장값이 깨졌거나 범위를 벗어나면 기본값으로. 슬라이더 값을 먼저 넣어야
+  //    changeStyle() 안의 previewSize(size-slider.value)가 복원된 크기로 계산된다.
+  let size=parseInt(lsGet(LS_SIZE),10);
+  if(!(size>=10 && size<=100)) size=DEF_SIZE;
+  document.getElementById('size-slider').value=size;
+  let bright=parseInt(lsGet(LS_BRIGHT),10);
+  if(!(bright>=0 && bright<=255)) bright=DEF_BRIGHT;
+  document.getElementById('brightness-slider').value=bright;
+  document.getElementById('bright-val').textContent=bright;
+
+  // ④ 스타일/폰트 — 저장된 값이 현재 목록에 없으면(옵션이 지워졌거나 값이 깨짐) 기본값으로
+  const savedStyle=lsGet(LS_STYLE);
+  const stOpt=STYLE_OPTIONS.find(o=>o[0]===savedStyle);
+  const styleVal=stOpt?stOpt[0]:DEF_STYLE;
+  document.getElementById('style-dd-btn').textContent=stOpt?stOpt[1]:DEF_STYLE_LABEL;
+
+  changeStyle(styleVal);   // previewSize + syncWindowWidth 포함
+  changeSize(size);
+  changeBrightness(bright);
+  upd();
+}
+try{
+  restoreClockSettings();
+}catch(e){
+  // 복원이 어떤 이유로든 실패해도 시계가 스타일 없이 남거나 아래 업데이트 안내가 멈추면 안 되므로,
+  // 예전과 똑같은 하드코딩 기본값으로 최소한의 화면은 반드시 세운다.
+  try{
+    setClockTz('system');
+    changeStyle(DEF_STYLE);
+    changeSize(DEF_SIZE);
+    changeBrightness(DEF_BRIGHT);
+  }catch(e2){}
+}
 
 // 업데이트 안내 (다른 초기화가 전부 끝난 뒤 마지막에 판단)
 initUpdateNotice();

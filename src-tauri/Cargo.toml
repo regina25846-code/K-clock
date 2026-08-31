@@ -1,6 +1,6 @@
 [package]
 name = "kris-clock"
-version = "1.4.2"
+version = "1.4.2-1"
 edition = "2021"
 
 [build-dependencies]

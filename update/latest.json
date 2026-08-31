@@ -1,11 +1,11 @@
 {
-  "version": "1.4.2",
-  "notes": "K-Clock v1.4.2",
-  "pub_date": "2026-08-26T19:48:28Z",
+  "version": "1.4.3",
+  "notes": "K-Clock v1.4.3",
+  "pub_date": "2026-08-31T17:58:44Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRckNMUnNaa1ZseUxtYWk2T0tMY1hETWN3eU5xR2lodlE5RE9GT29SOTM4amNHVzNEcmpDSUthd2l5VHFOZ3UzUlBuYS9lbTBiTW5GaXZ6WHU0cDF4K0JsYlVvbC9SRFE0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg3NzczNzA4CWZpbGU6Sy1DbG9ja18xLjQuMl94NjQtc2V0dXAuZXhlCkM3RGRhbWcxUHRHcHQ1K0dxYk5FVkl4TzlWcVRJblBzZis0KzNlcjM4bTBkbG9pbC9ra2dMTWg5M1RuN1pUNGlWK0pkUFZXNkE5bHI3dTJCcEFuY0NRPT0K",
-      "url": "https://github.com/regina25846-code/K-clock/releases/download/v1.4.2/K-Clock_1.4.2_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRckNMUnNaa1ZseUE5ZTRCb0NNM3BDcVNuRHNlVklrMFdGTWJYTkcvNG1sV1BlYTdHc0JyT2JQZEltVEJ6UW1hZyt6cXBWTFJ6eW9vTDlUV2MrckI5N25OMG93TXFCdHdzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4MTk5MTI0CWZpbGU6Sy1DbG9ja18xLjQuM194NjQtc2V0dXAuZXhlCjI0RTVoUW5vUFJnRjB1U1pZQ0ttbGRZZkdqYXdVWmt6M1FCL28yU0ZzZVI0WWozeWIzWCtadDNYTk5XaEMrWjZKYmtDWDdBaUt5VHpaQ09RTEI0NUFBPT0K",
+      "url": "https://github.com/regina25846-code/K-clock/releases/download/v1.4.3/K-Clock_1.4.3_x64-setup.exe"
     }
   }
 }

@@ -106,6 +106,18 @@ fn close_app(app: tauri::AppHandle) {
     app.exit(0);
 }
 
+// 메인 창(dist/index.html)이 쓰는 앱 버전.
+// About 창은 Rust가 URL 쿼리(about.html?v=…)로 넘겨주지만, 메인 창은 tauri.conf.json 이
+// 정적으로 만들기 때문에 쿼리를 끼워넣을 자리가 없다. 그래서 커맨드로 내려준다.
+// 화면 쪽에 버전을 하드코딩하면 릴리스마다 빠뜨려서 업데이트 안내가 안 뜬다
+// (2026-09-03 실사고: dist/index.html 의 APP_VERSION 이 1.3.10 에 멈춰 있었음).
+// core:app:version(getVersion) 대신 자체 커맨드를 쓰는 이유 — 이 앱엔 capabilities/ 가
+// 없어서 코어 플러그인 커맨드는 ACL 로 막히고, invoke_handler 에 등록한 자체 커맨드만 동작한다.
+#[tauri::command]
+fn get_app_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
+}
+
 // 업데이트 안내 카드의 "전체 변경 내역" 링크용 — 시스템 기본 브라우저로 연다.
 // Cargo.toml에 opener/shell 플러그인이 없어서 다른 커맨드들과 같은 방식(직접 프로세스 실행)으로 처리.
 // https:// 스킴만 허용(임의 프로토콜/로컬 파일 경로 실행 방지).
@@ -373,6 +385,7 @@ fn main() {
             set_always_on_top,
             minimize_window,
             close_app,
+            get_app_version,
             open_url,
             hide_window,
             set_window_height,

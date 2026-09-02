@@ -1211,8 +1211,12 @@ function changePanelColor(c){
 // ── 업데이트 안내 (K-시리즈 공용 컴포넌트, K-Clock 파일럿) ──
 const UPD_APP       = 'kclock';
 const UPD_APP_NAME  = 'K-Clock';
-const UPD_MORE_URL  = 'https://regina25846-code.github.io/K-clock/';
-const UPD_MAX_VERS  = 3;
+// 2026-09-03 형 지시 — 커스텀 도메인을 보여주고 깃허브 주소는 최대한 노출하지 않는다.
+const UPD_MORE_URL  = 'https://clock.krisb-infra.com/';
+// 2026-09-03 형 지시 — 앱 창이 좁아서 여러 버전을 넣으면 잘 안 보인다.
+// 앱에는 최신 것 하나만 띄우고, 지난 내역은 UPD_MORE_URL(다운로드 페이지)에서 본다.
+// 형: "최신것만 보여줘. 처음 설치하는 사람들은 웹페이지 들어가서 버전별 히스토리 알아서 보겠지."
+const UPD_MAX_VERS  = 1;
 let UPD_OPEN_EXTERNAL = window.__TAURI__ ? (url => invoke('open_url', { url })) : null;
 const UPD_KEY_SEEN  = UPD_APP + '.updateNotice.lastSeen';
 // ⚠️ 최신 버전 항목이 맨 위. 새 버전을 낼 때 여기에 항목을 추가하지 않으면
@@ -1277,8 +1281,8 @@ function updDecide(){
   try { seen = localStorage.getItem(UPD_KEY_SEEN); } catch(e) { return null; }
   if (seen === null){
     const mode = updHasLegacyData() ? 'update' : 'fresh';
-    const n = (mode === 'fresh') ? 2 : UPD_MAX_VERS;
-    return { mode, notes: UPDATE_NOTES.slice(0, n) };
+    // 2026-09-03 — 처음 설치한 사람도 최신 하나만 본다(형 지시). 지난 내역은 다운로드 페이지에서.
+    return { mode, notes: UPDATE_NOTES.slice(0, UPD_MAX_VERS) };
   }
   if (updCmpVersion(APP_VERSION, seen) <= 0) return null;
   const notes = UPDATE_NOTES

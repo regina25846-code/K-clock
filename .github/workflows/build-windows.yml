@@ -40,7 +40,7 @@ jobs:
         # 읽기 좋은 원본 소스가 설치파일 안에 통째로 들어간다. build:protected 는
         # dist/ 를 dist-protected/ 로 다시 쓰면서(주석 제거 + 이름 뭉개기) 검사를 통과한
         # 뒤에만 빌드한다. 검사가 실패하면 여기서 빌드가 멈춘다.
-        run: npm run build:protected
+        run: npm run build
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""

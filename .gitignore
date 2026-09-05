@@ -1,2 +1,9 @@
 node_modules/
 src-tauri/target/
+
+# 소스 보호 빌드 (PND-0113)
+# dist-protected/ : 주석을 걷고 이름을 뭉갠 배포용 사본. 매 빌드마다 새로 만든다.
+# sourcemaps/     : 뭉갠 이름을 원래 위치로 되짚는 지도. 공개 저장소에 올라가면
+#                   보호가 통째로 무의미해지므로 절대 커밋하지 않는다.
+dist-protected/
+sourcemaps/

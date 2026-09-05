@@ -371,7 +371,7 @@ body{background:transparent;padding:16px 28px 44px;}
   async function checkForUpdate() {
     const btn = document.getElementById('update-btn');
     const status = document.getElementById('update-status');
-    if (!window.__TAURI__) { status.textContent = '개발 모드에서는 확인할 수 없습니다'; return; }
+    if (!window.__TAURI__) { status.textContent = '개발 모드에서는 확인할 수 없습니다.'; return; }
     btn.disabled = true;
     status.textContent = '확인 중...';
     await syncAboutHeight();
@@ -380,12 +380,12 @@ body{background:transparent;padding:16px 28px 44px;}
       if (version) {
         status.textContent = `새 버전(v${version}) 설치 중, 곧 재시작됩니다...`;
       } else {
-        status.textContent = '최신 버전입니다';
+        status.textContent = '최신 버전입니다.';
         btn.disabled = false;
       }
     } catch (e) {
       console.error('[K-Clock] 업데이트 확인 실패:', e);
-      status.textContent = '확인 실패, 잠시 후 다시 시도해주세요';
+      status.textContent = '확인에 실패했습니다. 잠시 후 다시 시도해 주세요.';
       btn.disabled = false;
     }
     await syncAboutHeight();

@@ -229,7 +229,7 @@ select option { background:#1e1e1e; color:#b8b8b8; }
       <button class="btn-add" onclick="addAlarm()">추가</button>
     </div>
     <div class="alarm-list" id="alarm-list"></div>
-    <div class="empty-msg" id="alarm-empty">등록된 알람 없음</div>
+    <div class="empty-msg" id="alarm-empty">등록된 알람이 없어요.</div>
   </div>
 
   <div class="panel" id="panel-countdown">
@@ -241,7 +241,7 @@ select option { background:#1e1e1e; color:#b8b8b8; }
       <input type="number" id="cd-m" placeholder="분" min=0 max=59>
       <span>:</span>
       <input type="number" id="cd-s" placeholder="초" min=0 max=59>
-      <button class="cd-save-btn" id="cd-save-btn" onclick="cdSavePreset()" title="현재 입력한 시간을 프리셋으로 저장">저장</button>
+      <button class="cd-save-btn" id="cd-save-btn" onclick="cdSavePreset()" title="현재 입력한 시간을 프리셋으로 저장합니다.">저장</button>
     </div>
     <div id="cd-display">00:00:00</div>
     <div class="cd-btns">
@@ -251,7 +251,7 @@ select option { background:#1e1e1e; color:#b8b8b8; }
     </div>
     <div class="cd-preset-sec" id="cd-preset-sec">
       <div class="cd-preset-row" id="cd-preset-row"></div>
-      <div class="cd-hint" id="cd-hint">클릭 = 설정 · 더블클릭 = 바로 시작</div>
+      <div class="cd-hint" id="cd-hint">클릭은 설정, 두 번 클릭은 시작, 끌면 순서를 바꿔요.</div>
     </div>
   </div>
 
@@ -946,7 +946,7 @@ function renderCdPresets(){
       continue;
     }
     if(p){
-      el.title=`${fmtPreset(p.sec)}${p.name?' '+p.name:''} — 클릭: 설정 / 더블클릭: 바로 시작 / 끌어서 순서 변경`;
+      el.title=`${fmtPreset(p.sec)}${p.name?' '+p.name:''} — 클릭하면 설정, 두 번 클릭하면 바로 시작, 끌면 순서가 바뀝니다.`;
       el.innerHTML=`<button class="cd-preset-edit" title="시간·이름 수정">${CD_EDIT_ICON}</button>`
         + `<span class="p-time">${fmtPreset(p.sec)}</span>`
         + (p.name ? `<span class="p-name">${p.name}</span>` : '')
@@ -962,7 +962,7 @@ function renderCdPresets(){
       el.addEventListener('mousedown', e=>startCdPresetDrag(e, el, i));
     } else {
       el.textContent='+';
-      el.title='현재 입력한 시간을 이 칸에 저장';
+      el.title='현재 입력한 시간을 이 칸에 저장합니다.';
       el.onclick=()=>{ if(cdEditIdx<0) writeCdPreset(i); };
     }
     row.appendChild(el);
@@ -971,10 +971,10 @@ function renderCdPresets(){
 }
 function updateCdHint(){
   const hint=document.getElementById('cd-hint');
-  if(cdEditIdx>=0){ hint.textContent='시간 수정 후 저장 · Esc 취소'; hint.classList.add('picking'); return; }
-  if(cdNamingIdx>=0){ hint.textContent='이름 입력 후 Enter (비우면 시간만)'; hint.classList.add('picking'); return; }
-  if(cdPickMode){ hint.textContent='덮어쓸 칸을 클릭 (Esc 취소)'; hint.classList.add('picking'); return; }
-  hint.textContent='클릭=설정 · 더블클릭=시작 · 드래그=순서';
+  if(cdEditIdx>=0){ hint.textContent='시간을 고친 뒤 저장하세요 (Esc는 취소)'; hint.classList.add('picking'); return; }
+  if(cdNamingIdx>=0){ hint.textContent='이름을 쓰고 Enter를 누르세요 (비우면 시간만)'; hint.classList.add('picking'); return; }
+  if(cdPickMode){ hint.textContent='덮어쓸 칸을 클릭하세요 (Esc는 취소)'; hint.classList.add('picking'); return; }
+  hint.textContent='클릭은 설정, 두 번 클릭은 시작, 끌면 순서를 바꿔요.';
   hint.classList.remove('picking');
 }
 function applyCdPreset(i){

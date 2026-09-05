@@ -3,12 +3,18 @@
   "version": "1.0.0",
   "description": "K-Clock - 가벼운 바탕화면 시계",
   "scripts": {
+    "_comment_build": "⚠ 형에게 나가는 빌드는 반드시 build:protected 입니다. build/build:win 은 보호가 빠진 예전 방식이라 배포판에 개발 주석과 원본 소스가 그대로 실립니다 (PND-0113).",
     "dev": "tauri dev",
     "build": "tauri build",
-    "build:win": "cargo tauri build --target x86_64-pc-windows-msvc"
+    "build:win": "cargo tauri build --target x86_64-pc-windows-msvc",
+    "build:protected": "node build/protect.js --build",
+    "protect": "node build/protect.js",
+    "verify:protected": "node build/verify_protected.js"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2"
+    "@tauri-apps/cli": "^2",
+    "html-minifier-terser": "^7.2.0",
+    "terser": "^5.51.2"
   },
   "dependencies": {
     "@tauri-apps/api": "^2"

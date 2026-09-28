@@ -1726,7 +1726,7 @@ dependencies = [
 
 [[package]]
 name = "kris-clock"
-version = "1.4.3"
+version = "1.4.3-1"
 dependencies = [
  "serde",
  "serde_json",

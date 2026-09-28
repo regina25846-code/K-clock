@@ -39,6 +39,16 @@ pub fn to_phys(logical: f64, scale: f64) -> i32 {
     if p < 1.0 { 1 } else if p > 100_000.0 { 100_000 } else { p as i32 }
 }
 
+// ── 드래그 끝 감지(1.4.3-4, PND-0330) ──
+// 창 드래그는 OS 가 맡아서(start_dragging) 그동안 화면(JS)에 mouseup 이 오지 않을 수 있다.
+// 그래서 "창 이동 알림(WindowEvent::Moved)이 QUIET 동안 없고, 마우스 버튼이 떼어져 있음"을
+// 드래그 끝으로 본다. 버튼을 누른 채 잠깐 멈춘 것은 끝이 아니다.
+pub const MOVE_END_QUIET_MS: u64 = 120;
+pub const MOVE_END_POLL_MS: u64 = 30;
+pub fn move_end_due(pending: bool, now_ms: u64, last_move_ms: u64, button_down: bool) -> bool {
+    pending && !button_down && now_ms.saturating_sub(last_move_ms) >= MOVE_END_QUIET_MS
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -156,6 +166,34 @@ mod tests {
         assert_eq!(to_phys(300.0, f64::NAN), 300);
         assert_eq!(to_phys(300.0, 0.0), 300);
         assert_eq!(to_phys(1e12, 2.0), 100_000);
+    }
+    #[test]
+    fn move_end_detection() {
+        // 움직인 적 없으면 안 보냄
+        assert!(!move_end_due(false, 10_000, 0, false));
+        // 마지막 이동 직후엔 아직
+        assert!(!move_end_due(true, 1_000 + MOVE_END_QUIET_MS - 1, 1_000, false));
+        // 조용해지면 보냄
+        assert!(move_end_due(true, 1_000 + MOVE_END_QUIET_MS, 1_000, false));
+        // 버튼을 누른 채 멈춰 있으면 아직(끌다가 잠깐 멈춘 것)
+        assert!(!move_end_due(true, 9_000, 1_000, true));
+        // 시계가 거꾸로 가도(last > now) 멈추지 않고 안 보냄
+        assert!(!move_end_due(true, 500, 1_000, false));
+        // 최악 지연 = 조용 대기 + 한 번 확인 주기 ≤ 0.3초
+        assert!(MOVE_END_QUIET_MS + MOVE_END_POLL_MS <= 300);
+        // 빠르게 끌다 놓기 흉내: 16ms 마다 이동, 버튼 뗀 순간부터 첫 신호까지
+        let mut last = 0u64; let mut t = 0u64; let mut fired_at = None;
+        for step in 0..200u64 {
+            t = step * 16;
+            let dragging = step < 100;
+            if dragging { last = t; }
+            // 확인 스레드는 POLL 간격으로만 본다
+            if t % MOVE_END_POLL_MS < 16 && move_end_due(true, t, last, dragging) { fired_at = Some(t); break; }
+        }
+        let released = 99 * 16;
+        let lat = fired_at.expect("신호가 와야 한다") - released;
+        assert!(lat <= MOVE_END_QUIET_MS + MOVE_END_POLL_MS + 16, "지연 {}ms", lat);
+        let _ = t;
     }
     #[test]
     fn bad_sizes_do_not_panic() {

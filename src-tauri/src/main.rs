@@ -379,6 +379,41 @@ async fn sample_backdrop_luma(window: tauri::Window, clock_h: f64, panel_open: b
 // 로 막은 뒤 set_window_rect 로 보냈다. 메인 왼쪽 모니터는 x 가 음수라 매번 x=0(메인)으로
 // 끌려갔다. 이제 위치 계산은 전부 여기서 물리 픽셀로 하고, 가두는 범위는 창이 있는 모니터다.
 // 화면은 원하는 크기(논리 px)만 넘긴다.
+// 드래그 끝 감지 상태(1.4.3-4). 이동 알림은 메인 스레드에서 오고, 확인은 작은 스레드가 30ms 마다 한다.
+static LAST_MOVE_MS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+static MOVE_PENDING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+fn now_ms() -> u64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
+}
+// 마우스 버튼이 눌려 있나(물리 왼쪽·오른쪽 둘 다 봄 — 버튼을 바꿔 쓰는 사람도 있다).
+fn mouse_button_down() -> bool {
+    #[cfg(windows)]
+    {
+        use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON, VK_RBUTTON};
+        let (l, r) = unsafe { (GetAsyncKeyState(VK_LBUTTON.0 as i32), GetAsyncKeyState(VK_RBUTTON.0 as i32)) };
+        ((l as u16) & 0x8000 != 0) || ((r as u16) & 0x8000 != 0)
+    }
+    #[cfg(not(windows))]
+    {
+        false
+    }
+}
+fn start_move_end_watcher(app: tauri::AppHandle) {
+    let _ = std::thread::Builder::new().name("kclock-move-end".into()).spawn(move || loop {
+        std::thread::sleep(std::time::Duration::from_millis(window_math::MOVE_END_POLL_MS));
+        let pending = MOVE_PENDING.load(std::sync::atomic::Ordering::Relaxed);
+        if !pending { continue; }
+        let last = LAST_MOVE_MS.load(std::sync::atomic::Ordering::Relaxed);
+        if window_math::move_end_due(pending, now_ms(), last, mouse_button_down()) {
+            MOVE_PENDING.store(false, std::sync::atomic::Ordering::Relaxed);
+            if let Some(win) = app.get_webview_window("main") {
+                // 화면 쪽에 "방금 놓았다"를 알린다. 함수가 없으면(구버전 화면) 아무 일도 안 한다.
+                let _ = win.eval("window.kcOnMoveEnd && window.kcOnMoveEnd()");
+            }
+        }
+    });
+}
+
 #[tauri::command]
 fn resize_keep_center(window: tauri::Window, width: f64, height: f64) {
     let scale = window.scale_factor().unwrap_or(1.0);
@@ -500,6 +535,7 @@ fn main() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .setup(|app| {
+            start_move_end_watcher(app.handle().clone());
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 if let Ok(updater) = handle.updater() {
@@ -562,6 +598,13 @@ fn main() {
             Ok(())
         })
         .on_window_event(|window, event| {
+            if let tauri::WindowEvent::Moved(_) = event {
+                if window.label() == "main" {
+                    LAST_MOVE_MS.store(now_ms(), std::sync::atomic::Ordering::Relaxed);
+                    MOVE_PENDING.store(true, std::sync::atomic::Ordering::Relaxed);
+                }
+                return;
+            }
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 if window.label() == "about" {
                     return;

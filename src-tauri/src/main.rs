@@ -221,6 +221,157 @@ fn set_window_rect(window: tauri::Window, x: i32, y: i32, width: u32, height: u3
     let _ = window.set_resizable(false);
 }
 
+// ── 글자색 자동(카멜레온, 1.4.3-2, PND-0330) ──
+// 시계 창 "바로 바깥" 테두리 띠 네 줄을 화면에서 복사해 평균 밝기(0~255)를 돌려준다.
+// 창 안쪽(=창 뒤)을 읽으려면 우리 창을 캡처에서 빼야 하는데(WDA_EXCLUDEFROMCAPTURE),
+// 그러면 형의 스크린샷·녹화·화면공유에서도 시계가 사라진다. 바깥 띠만 읽으면 우리 창이
+// 섞이지 않으므로 뺄 필요가 없고, GDI BitBlt 라 노란 캡처 테두리·권한 창도 없다.
+// - 패널이 열려 있으면 아래쪽 띠는 건너뛰고, 옆 띠는 시계 높이까지만 읽는다(패널 옆이 아니라 시계 옆).
+// - 띠는 창이 있는 모니터 안으로 잘라낸다 → 화면 가장자리·모니터 밖에 걸쳐도 그 모니터 것만 읽는다.
+// - 좌표는 전부 물리 픽셀(GetWindowRect·GetMonitorInfo·화면 DC 가 같은 기준) → DPI 배율과 무관.
+// - 무엇이든 실패하면 None → 화면 쪽은 지금 색을 그대로 둔다.
+#[cfg(windows)]
+fn sample_ring_luma(hwnd: windows::Win32::Foundation::HWND, clock_px: i32, panel_open: bool) -> Option<(f64, i32, i32)> {
+    use windows::Win32::Foundation::RECT;
+    use windows::Win32::Graphics::Gdi::{
+        BitBlt, CreateCompatibleDC, CreateDIBSection, DeleteDC, DeleteObject, GetDC, GetMonitorInfoW,
+        MonitorFromWindow, ReleaseDC, SelectObject, BITMAPINFO, BITMAPINFOHEADER, BI_RGB,
+        DIB_RGB_COLORS, MONITORINFO, MONITOR_DEFAULTTONEAREST, SRCCOPY,
+    };
+    use windows::Win32::UI::WindowsAndMessaging::{GetWindowRect, IsIconic, IsWindowVisible};
+
+    const GAP: i32 = 2; // 창 가장자리 안티에일리어싱을 피하는 여유
+    const T: i32 = 6; // 띠 두께(px)
+    const MAX_SIDE: i32 = 2000; // 비정상 크기 방어
+
+    unsafe {
+        if !IsWindowVisible(hwnd).as_bool() || IsIconic(hwnd).as_bool() {
+            return None;
+        }
+        let mut wr = RECT::default();
+        GetWindowRect(hwnd, &mut wr).ok()?;
+        if wr.right <= wr.left || wr.bottom <= wr.top {
+            return None;
+        }
+        let mon = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+        let mut mi = MONITORINFO { cbSize: std::mem::size_of::<MONITORINFO>() as u32, ..Default::default() };
+        if !GetMonitorInfoW(mon, &mut mi).as_bool() {
+            return None;
+        }
+        let m = mi.rcMonitor;
+        let win_h = wr.bottom - wr.top;
+        let side_h = if clock_px > 0 && clock_px < win_h { clock_px } else { win_h };
+        let side_bottom = wr.top + side_h;
+        let mut strips: Vec<RECT> = vec![
+            // 위
+            RECT { left: wr.left - GAP - T, top: wr.top - GAP - T, right: wr.right + GAP + T, bottom: wr.top - GAP },
+            // 왼쪽 (시계 높이까지)
+            RECT { left: wr.left - GAP - T, top: wr.top - GAP, right: wr.left - GAP, bottom: side_bottom + GAP },
+            // 오른쪽 (시계 높이까지)
+            RECT { left: wr.right + GAP, top: wr.top - GAP, right: wr.right + GAP + T, bottom: side_bottom + GAP },
+        ];
+        if !panel_open {
+            strips.push(RECT { left: wr.left - GAP - T, top: wr.bottom + GAP, right: wr.right + GAP + T, bottom: wr.bottom + GAP + T });
+        }
+
+        let screen = GetDC(None);
+        if screen.is_invalid() {
+            return None;
+        }
+        let mut sum = 0.0f64;
+        let mut count = 0u64;
+        for r in strips.iter() {
+            // 모니터 안으로 자르기
+            let x0 = r.left.max(m.left);
+            let y0 = r.top.max(m.top);
+            let x1 = r.right.min(m.right);
+            let y1 = r.bottom.min(m.bottom);
+            let w = x1 - x0;
+            let h = y1 - y0;
+            if w <= 0 || h <= 0 || w > MAX_SIDE || h > MAX_SIDE {
+                continue;
+            }
+            let mem = CreateCompatibleDC(Some(screen));
+            if mem.is_invalid() {
+                continue;
+            }
+            let mut bmi = BITMAPINFO::default();
+            bmi.bmiHeader = BITMAPINFOHEADER {
+                biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
+                biWidth: w,
+                biHeight: -h, // 위에서 아래로
+                biPlanes: 1,
+                biBitCount: 32,
+                biCompression: BI_RGB.0,
+                ..Default::default()
+            };
+            let mut bits: *mut core::ffi::c_void = std::ptr::null_mut();
+            let bmp = match CreateDIBSection(Some(mem), &bmi, DIB_RGB_COLORS, &mut bits, None, 0) {
+                Ok(b) if !b.is_invalid() && !bits.is_null() => b,
+                Ok(b) => {
+                    if !b.is_invalid() {
+                        let _ = DeleteObject(b.into());
+                    }
+                    let _ = DeleteDC(mem);
+                    continue;
+                }
+                Err(_) => {
+                    let _ = DeleteDC(mem);
+                    continue;
+                }
+            };
+            let old = SelectObject(mem, bmp.into());
+            if BitBlt(mem, 0, 0, w, h, Some(screen), x0, y0, SRCCOPY).is_ok() {
+                let px = std::slice::from_raw_parts(bits as *const u8, (w as usize) * (h as usize) * 4);
+                // BGRA, 두 칸 건너 하나씩만 봐도 평균엔 충분하다
+                let mut i = 0usize;
+                while i + 3 < px.len() {
+                    let b = px[i] as f64;
+                    let g = px[i + 1] as f64;
+                    let r = px[i + 2] as f64;
+                    sum += 0.299 * r + 0.587 * g + 0.114 * b;
+                    count += 1;
+                    i += 8;
+                }
+            }
+            SelectObject(mem, old);
+            let _ = DeleteObject(bmp.into());
+            let _ = DeleteDC(mem);
+        }
+        ReleaseDC(None, screen);
+        if count == 0 {
+            return None;
+        }
+        let v = sum / count as f64;
+        // 창 위치도 같이 돌려준다 — 화면 쪽이 "끌고 다니는 중"인지 판단하는 데 쓴다.
+        if v.is_finite() { Some((v, wr.left, wr.top)) } else { None }
+    }
+}
+
+// JS 가 1~2초마다 부른다. async 라 메인(UI) 스레드를 막지 않는다.
+// 돌려주는 값: [평균 밝기 0~255, 창 왼쪽 x, 창 위 y](물리 픽셀). 못 읽으면 null.
+// 실패·패닉은 전부 None 으로 삼킨다 — 이 기능 때문에 앱이 죽으면 안 된다.
+#[tauri::command]
+async fn sample_backdrop_luma(window: tauri::Window, clock_h: f64, panel_open: bool) -> Option<(f64, i32, i32)> {
+    #[cfg(windows)]
+    {
+        if !window.is_visible().unwrap_or(false) || window.is_minimized().unwrap_or(true) {
+            return None;
+        }
+        let hwnd = window.hwnd().ok()?;
+        let scale = window.scale_factor().unwrap_or(1.0);
+        let clock_px = if clock_h.is_finite() && clock_h > 0.0 { (clock_h * scale).round() as i32 } else { 0 };
+        return std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| sample_ring_luma(hwnd, clock_px, panel_open)))
+            .ok()
+            .flatten();
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (window, clock_h, panel_open);
+        None
+    }
+}
+
 #[tauri::command]
 fn set_autostart(app: tauri::AppHandle, enabled: bool) {
     let mgr = app.autolaunch();
@@ -403,6 +554,7 @@ fn main() {
             refresh_always_on_top,
             list_system_sounds,
             read_system_sound,
+            sample_backdrop_luma,
         ])
         .run(tauri::generate_context!())
         .expect("K-Clock 실행 실패");

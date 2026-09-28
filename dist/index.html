@@ -514,16 +514,11 @@ async function syncWindowWidth(){
       // 90은 tauri.conf.json의 minHeight와 일치 — 이보다 작게 요청해봐야 네이티브 창은 안 줄어들면서
       // 요청값 기준 계산만 어긋나므로 의미 없음(폭의 200 하한과 동일한 이유).
       const h=Math.max(clockContentHeight()+10+(panelEl?panelEl.offsetHeight:0), 90);
-      // 예전엔 패널 열 때 캡처해둔 위치(lockedPos)를 계속 재사용해서, 그 뒤로 창을 옮겼거나
-      // 시간이 지나면 "그때 그 자리"로 되돌아가는 것처럼 보이는 문제가 있었음 —
-      // 매번 지금 실제 위치를 새로 읽어서 그 자리 기준으로만 중심을 맞추도록 변경.
-      const pos=await invoke('get_window_pos');
-      const cx=pos[0]+Math.round(window.innerWidth/2);
-      const newX=Math.max(0, cx - Math.round(w/2));
-      // 크기(set_window_size)와 위치(set_window_pos)를 따로 왕복하면 그 사이에 프레임이
-      // 끼어들어 "커졌다가 옮겨지는" 2단계 움직임이 떨림으로 보였음(2026-08-02) —
-      // 한 커맨드(set_window_rect)로 합쳐서 왕복을 줄임.
-      await invoke('set_window_rect',{x:newX,y:pos[1],width:w,height:h});
+      // 위치 계산(가운데 유지·모니터 안으로 가두기)은 Rust 가 물리 픽셀로 한다(1.4.3-3).
+      // 예전엔 여기서 get_window_pos 로 가운데를 계산하고 x 를 Math.max(0,…) 로 막았는데,
+      // 메인 왼쪽 모니터는 x 가 음수라 크기를 맞출 때마다 시계가 메인 모니터로 점프했다.
+      // 크기와 위치는 Rust 안에서 SetWindowPos 한 번으로 같이 바뀐다(2026-08-02 떨림 수정 유지).
+      await invoke('resize_keep_center',{width:w,height:h});
     } while(syncPending);
   } finally {
     // invoke 중 하나라도 실패하면 syncBusy가 true로 영원히 남아 이후 모든 리사이즈가
@@ -1383,7 +1378,6 @@ function changePanelColor(c){
   panelColor=(c==='white'||c==='auto')?c:'black';
   syncPanelColorBtns();
   updatePanelBg();
-  renderAlarms();
   localStorage.setItem('panelColor',panelColor);
 }
 
@@ -1441,8 +1435,7 @@ function setClockAuto(on){
   if(tog) tog.classList.toggle('off',!clockAuto);
   // 켤 때는 지금 보이는 색에서 출발하고, 첫 판단은 기다리지 않게 last=0
   chamState={mode:modeOfLevel(brightness), pending:null, count:0, last:0};
-  applyColors(true);
-  renderAlarms();
+  applyColors(true);   // 알람 줄 색도 applyColors 가 칠한다 — 목록을 다시 그리면 창 크기 맞추기가 돈다
 }
 function toggleClockAuto(){ setClockAuto(!clockAuto); if(clockAuto) chamTick(); }
 async function chamTick(){
@@ -1458,7 +1451,7 @@ async function chamTick(){
     chamPos=pos;
     const prev=chamState.mode;
     chamState=chamDecide(chamState, r[0], Date.now(), moved);
-    if(chamState.mode!==prev){ applyColors(true); renderAlarms(); }
+    if(chamState.mode!==prev) applyColors(true);   // 색만 바꾼다 — 창 크기·위치는 절대 안 건드림
   }catch(e){ /* 읽기 실패 → 지금 색 그대로 */ }
   finally{ chamBusy=false; }
 }
@@ -1628,6 +1621,21 @@ function initUpdateNotice(){
 loadCdPresets();
 renderCdPresets();
 syncSaveBtn();
+
+// 자동 기본값 한 번 옮기기(1.4.3-3, 형 지시 34150-3·34157) — "사람들이 자동으로 되는 걸 모를 테니".
+// 이 표시가 없는 사람(기존 사용자 포함)은 한 번 패널 색상·글자색을 둘 다 「자동」으로 옮기고,
+// 그 뒤에 직접 바꾼 값은 표시가 남아 있으니 다시 덮지 않는다. 밝기·투명도는 건드리지 않는다.
+// 두 값을 저장한 "뒤에" 표시를 남긴다 — 중간에 실패하면 다음 시작 때 다시 시도한다.
+const LS_AUTO_DEFAULTS='kclock.autoDefaults.v1';
+(function(){
+  try{
+    if(localStorage.getItem(LS_AUTO_DEFAULTS)!==null) return;
+    localStorage.setItem('panelColor','auto');
+    localStorage.setItem(LS_AUTOCOLOR,'1');
+    localStorage.setItem(LS_AUTO_DEFAULTS,'1');
+    clockAuto=true;
+  }catch(e){}
+})();
 
 // 설정 복원
 (function(){

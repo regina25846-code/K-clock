@@ -5,6 +5,8 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Manager,
 };
+mod window_math;
+
 use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_updater::UpdaterExt;
 
@@ -372,6 +374,42 @@ async fn sample_backdrop_luma(window: tauri::Window, clock_h: f64, panel_open: b
     }
 }
 
+// 창 크기를 바꾸면서 가로 가운데를 유지한다(1.4.3-3, PND-0330 — 1번 모니터 점프 수정).
+// 예전엔 화면(JS)이 get_window_pos 로 논리 좌표를 받아 가운데를 계산하고 x 를 Math.max(0,…)
+// 로 막은 뒤 set_window_rect 로 보냈다. 메인 왼쪽 모니터는 x 가 음수라 매번 x=0(메인)으로
+// 끌려갔다. 이제 위치 계산은 전부 여기서 물리 픽셀로 하고, 가두는 범위는 창이 있는 모니터다.
+// 화면은 원하는 크기(논리 px)만 넘긴다.
+#[tauri::command]
+fn resize_keep_center(window: tauri::Window, width: f64, height: f64) {
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let pos = match window.outer_position() { Ok(p) => p, Err(_) => return };
+    let size = match window.outer_size() { Ok(s) => s, Err(_) => return };
+    let mon = window.current_monitor().ok().flatten().map(|m| {
+        let p = m.position();
+        let s = m.size();
+        (p.x, p.y, s.width as i32, s.height as i32)
+    });
+    let (x, y, w, h) = window_math::keep_center_rect(
+        (pos.x, pos.y, size.width as i32, size.height as i32),
+        window_math::to_phys(width, scale),
+        window_math::to_phys(height, scale),
+        mon,
+    );
+    #[cfg(windows)]
+    {
+        if let Ok(hwnd) = window.hwnd() {
+            let _ = window.set_resizable(true);
+            set_window_rect_native(hwnd, x, y, w, h);
+            let _ = window.set_resizable(false);
+            return;
+        }
+    }
+    let _ = window.set_resizable(true);
+    let _ = window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width: w as u32, height: h as u32 }));
+    let _ = window.set_position(tauri::Position::Physical(tauri::PhysicalPosition { x, y }));
+    let _ = window.set_resizable(false);
+}
+
 #[tauri::command]
 fn set_autostart(app: tauri::AppHandle, enabled: bool) {
     let mgr = app.autolaunch();
@@ -555,6 +593,7 @@ fn main() {
             list_system_sounds,
             read_system_sound,
             sample_backdrop_luma,
+            resize_keep_center,
         ])
         .run(tauri::generate_context!())
         .expect("K-Clock 실행 실패");

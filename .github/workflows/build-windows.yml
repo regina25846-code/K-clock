@@ -96,7 +96,7 @@ jobs:
             src-tauri/target/release/bundle/nsis/*.exe
             src-tauri/target/release/bundle/nsis/*.exe.sig
           if-no-files-found: warn
-          retention-days: 30
+          retention-days: 3  # PND-0353 — 설치 파일은 릴리즈에도 있다. 아티팩트는 CI 직후 꺼내 볼 때만이라 3일(계정 저장 한도 보호).
 
       - name: Create Release
         uses: softprops/action-gh-release@v2

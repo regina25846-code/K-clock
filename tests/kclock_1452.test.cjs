@@ -178,10 +178,11 @@ const TEAL = ['rgb(68, 170, 153)', 'rgba(68, 170, 153, 0.14)'];
   await setDesk('light'); await page.waitForTimeout(800);
   await page.click('#alarm-list .alarm-toggle[data-id="1"]');
   await page.waitForTimeout(80);
-  const midBg = await page.evaluate(() => getComputedStyle(document.querySelector('#alarm-list .alarm-toggle[data-id="1"]').closest('.alarm-item').querySelector('.alarm-days-tag')).backgroundColor);
-  const a = (midBg.match(/[\d.]+/g) || []).map(Number);
-  ok(a.length === 4 && a[3] > 0.05 && a[3] < 0.95, '글자 바탕이 0.08초 때 반쯤 흐려지는 중(서서히 꺼짐)', midBg);
+  // 1.4.5-2 2차(형 46110): 라이트 글자 바탕(금색 알약)은 없앰 → 꺼질 때 요일 글자색이 중간값을 지나가는지로 잰다
+  const midFg = await page.evaluate(() => getComputedStyle(document.querySelector('#alarm-list .alarm-toggle[data-id="1"]').closest('.alarm-item').querySelector('.alarm-days-tag')).color);
   await page.waitForTimeout(500);
+  const endFg = await page.evaluate(() => getComputedStyle(document.querySelector('#alarm-list .alarm-toggle[data-id="1"]').closest('.alarm-item').querySelector('.alarm-days-tag')).color);
+  ok(midFg !== endFg && midFg !== 'rgb(90, 63, 14)', '요일 글자색이 0.08초 때 바뀌는 중(서서히 꺼짐)', `${midFg} → ${endFg}`);
   await page.click('#alarm-list .alarm-toggle[data-id="1"]'); await page.waitForTimeout(500);
   // 테마 전환(글자색 자동의 0.6초 전환) 동안: 상자 불변, 스위치 그림자도 서서히
   const preT = await box(1);
@@ -230,7 +231,8 @@ const TEAL = ['rgb(68, 170, 153)', 'rgba(68, 170, 153, 0.14)'];
     });
     ok(r.bad.length === 0, `창 폭 ${r.w}px(패널 최소)에서 잘림·줄바꿈 없음 (${mode})`, r.bad.slice(0, 5).join(', '));
   }
-  // ── 8) 설정 막대 3개 — 형 46102: 아이콘 없이 막대만, 6px → 올리면 12px(.1s), 채움 왼쪽부터 값만큼, 테마별 색 ──
+  // ── 8) 설정 막대 3개 — 형 46102: 아이콘 없이 막대만, 채움 왼쪽부터 값만큼, 테마별 색
+  //    형 46110(2차): 평소 3px → 올리면 6px(.1s). 입력칸은 16px 투명(누르는 자리 그대로), 보이는 막대는 안쪽 줄이 그림 ──
   {
     const IDS = ['size-slider', 'brightness-slider', 'panel-opacity-slider'];
     await page.mouse.move(5, 5);
@@ -240,30 +242,40 @@ const TEAL = ['rgb(68, 170, 153)', 'rgba(68, 170, 153, 0.14)'];
     const src = require('fs').readFileSync(path.join(DIST, 'index.html'), 'utf8');
     ok(!/accent-color/i.test(src), 'index.html 에 accent-color 없음(기본 막대 색 안 씀)');
     const st = await page.evaluate((ids) => { let thumbRule = {};
-      for (const ss of document.styleSheets) for (const r of ss.cssRules) if (r.selectorText === '.slider .level::-webkit-slider-thumb') thumbRule = r.style;
+      let trackRule = {};
+      for (const ss of document.styleSheets) for (const r of ss.cssRules) { if (r.selectorText === '.slider .level::-webkit-slider-thumb') thumbRule = r.style; if (r.selectorText === '.slider .level::-webkit-slider-runnable-track') trackRule = r.style; }
       return ids.map((id) => {
       const e = document.getElementById(id), w = e.parentElement, cs = getComputedStyle(e);
       return { id, wrap: w.className, kids: w.children.length, svg: w.querySelectorAll('svg,img,i').length, appear: cs.webkitAppearance || cs.appearance,
         h: e.getBoundingClientRect().height, w: e.getBoundingClientRect().width, rad: cs.borderRadius, ov: cs.overflow, acc: e.getAttribute('style') || '',
-        tw: thumbRule.width, thh: thumbRule.height, tsh: thumbRule.boxShadow, bg: cs.backgroundColor, tr: cs.transition };
+        tw: thumbRule.width, thh: thumbRule.height, tsh: thumbRule.boxShadow, bg: cs.backgroundColor, tr: trackRule.transition || '', trad: trackRule.borderRadius, tov: trackRule.overflow, dur: getComputedStyle(e).getPropertyValue('--level-transition-duration').trim() };
     }); }, IDS);
     for (const s of st) {
       ok(s.wrap === 'slider' && s.kids === 1 && s.svg === 0, `${s.id}: 아이콘 없이 막대만(.slider 안에 입력 하나)`, `${s.wrap}/${s.kids}/${s.svg}`);
       ok(s.appear === 'none' && !/accent/.test(s.acc), `${s.id}: 기본 모양 끔·accent-color 없음`, s.appear);
-      ok(s.h === 6 && s.w === 70 && s.rad === '999px' && s.ov === 'hidden', `${s.id}: 두께 6px·폭 70px·끝 둥글게`, `${s.w}×${s.h} ${s.rad}`);
+      ok(s.h === 16 && s.w === 70 && s.bg === 'rgba(0, 0, 0, 0)' && /var\(--slider-border-radius\)/.test(s.trad) && s.tov === 'hidden', `${s.id}: 입력칸 70×16 투명(누르는 자리)·보이는 막대 끝 둥글게`, `${s.w}×${s.h} ${s.bg} ${s.trad}`);
       ok(s.tw === '0px' && s.thh === '0px' && /^-200px 0(px)? 0(px)? 200px/.test(s.tsh), `${s.id}: 손잡이 0 크기·채움 그림자 -200px 0 0 200px(막대 70px ≤ 200)`, s.tsh);
-      ok(/height 0\.1s/.test(s.tr), `${s.id}: 두께 바뀜 0.1초`, s.tr);
+      ok(/height var\(--level-transition-duration\)/.test(s.tr) && s.dur === '.1s', `${s.id}: 두께 바뀜 0.1초`, s.tr + ' / ' + s.dur);
     }
-    // 마우스 올리면 12px, 줄 높이·옆 숫자 자리 그대로
+    // 마우스 올리면 두께 2배(평소 3px=6 기기 픽셀 → 6px=12), 줄 높이·옆 숫자 자리 그대로 — 두께는 화면 픽셀(세로 줄 수)로
+    async function barRows(id) {
+      const r = await page.evaluate((i) => { const b = document.getElementById(i).getBoundingClientRect(); return { x: b.x + 4, y: b.y, width: 1, height: b.height }; }, id);
+      const buf = await page.screenshot({ clip: r });
+      return page.evaluate(async (b64) => { const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode();
+        const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const x = c.getContext('2d'); x.drawImage(img, 0, 0);
+        const d = x.getImageData(0, 0, 1, img.height).data; const top = [d[0], d[1], d[2]]; let n = 0;
+        for (let y = 0; y < img.height; y++) if (Math.max(...[0, 1, 2].map((k) => Math.abs(d[y * 4 + k] - top[k]))) > 8) n++;
+        return n; }, buf.toString('base64'));
+    }
     for (const id of IDS) {
       const g = () => page.evaluate((i) => { const e = document.getElementById(i), r = e.getBoundingClientRect(), row = e.closest('.setting-row').getBoundingClientRect(), v = e.parentElement.nextElementSibling.getBoundingClientRect();
         return { x: r.x, y: r.y, w: r.width, h: r.height, row: row.height, rowY: row.y, vx: v.x, vy: v.y }; }, id);
-      const a = await g();
+      const a = await g(); const ra = await barRows(id);
       await page.mouse.move(a.x + 20, a.y + a.h / 2); await page.waitForTimeout(250);
-      const b = await g();
+      const b = await g(); const rb = await barRows(id);
       await page.mouse.move(5, 5); await page.waitForTimeout(250);
-      const c = await g();
-      ok(b.h === 12 && c.h === 6, `${id}: 마우스 올리면 12px, 내리면 6px`, `${a.h}→${b.h}→${c.h}`);
+      const c = await g(); const rc = await barRows(id);
+      ok(ra === 6 && rb === 12 && rc === 6, `${id}: 막대 평소 3px → 올리면 6px → 내리면 3px(배율 2 기기 픽셀 6→12→6)`, `${ra}→${rb}→${rc}`);
       ok(a.row === 31, `${id}: 줄 높이 31px(옛 기본 막대 때와 같음)`, String(a.row));
       ok(a.row === b.row && a.rowY === b.rowY && a.vx === b.vx && a.vy === b.vy, `${id}: 두꺼워져도 줄 높이·옆 숫자 자리 그대로`, `줄 ${a.row}→${b.row} 숫자 ${a.vx},${a.vy}→${b.vx},${b.vy}`);
     }
@@ -280,7 +292,14 @@ const TEAL = ['rgb(68, 170, 153)', 'rgba(68, 170, 153, 0.14)'];
         const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const x = c.getContext('2d'); x.drawImage(img, 0, 0);
         const d = x.getImageData(Math.floor(img.width / 2), Math.floor(img.height / 2), 1, 1).data; return `rgb(${d[0]}, ${d[1]}, ${d[2]})`; }, buf.toString('base64'));
       await page.$eval('#panel-opacity-slider', (e, v) => { e.value = v; }, keepO);
-      col[mode] = { bg: await page.$eval('#size-slider', (e) => getComputedStyle(e).backgroundColor), fill: px };
+      // 바탕색: 값 0 으로 두고 가운데 픽셀
+      await page.$eval('#panel-opacity-slider', (e) => { e.value = 0; });
+      const buf0 = await page.screenshot({ clip: r });
+      const px0 = await page.evaluate(async (b64) => { const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode();
+        const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const x = c.getContext('2d'); x.drawImage(img, 0, 0);
+        const d = x.getImageData(Math.floor(img.width / 2), Math.floor(img.height / 2), 1, 1).data; return `rgb(${d[0]}, ${d[1]}, ${d[2]})`; }, buf0.toString('base64'));
+      await page.$eval('#panel-opacity-slider', (e, v) => { e.value = v; }, keepO);
+      col[mode] = { bg: px0, fill: px };
     }
     ok(col.dark.bg === 'rgb(82, 82, 82)' && col.dark.fill === 'rgb(255, 255, 255)', '다크: 바탕 rgb(82,82,82)·채움 흰색(형 값 그대로, 화면 픽셀)', `${col.dark.bg} / ${col.dark.fill}`);
     ok(col.light.bg === 'rgb(190, 190, 190)' && col.light.fill === 'rgb(51, 51, 51)', '라이트: 바탕 연회색 rgb(190,190,190)·채움 진회색 #333(뒤집음, 화면 픽셀)', `${col.light.bg} / ${col.light.fill}`);

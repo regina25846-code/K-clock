@@ -17,6 +17,9 @@
 * { margin:0; padding:0; box-sizing:border-box; user-select:none; -webkit-user-select:none; }
 body { background:transparent; font-family:'Pretendard KR','Segoe UI',sans-serif; overflow:hidden; }
 button, input, select, textarea { font-family:inherit; }
+/* 1.4.5-2(형 46110): 숫자 칸(카운트 시·분·초)의 위아래 화살표 없앰 — 키보드 ↑↓·직접 입력은 그대로 */
+input[type=number] { -moz-appearance:textfield; appearance:textfield; }
+input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance:none; appearance:none; margin:0; }
 .panel, #ctx-menu { font-variant-numeric:tabular-nums; }
 
 #clock-area { width:100%; display:flex; flex-direction:column; align-items:center; cursor:grab; background:transparent; }
@@ -104,13 +107,15 @@ button, input, select, textarea { font-family:inherit; }
 /* 알람 목록 글씨·스위치 (1.4.5-1, PND-0412 — 형이 고른 시안 B2: 글꼴은 레이더(Pretendard), 색은 샴페인 골드,
    시안 /Users/openclaw-mini/.openclaw/kclock_1451_mock/index.html). 켜짐은 밝게, 꺼짐은 한 단계 가라앉힘.
    색은 패널 바탕(검정/흰색 — body.panel-light)에 따라 아래 변수로 바뀐다. 대비(패널 50% 기준):
-   어두움 켜짐 14.54·요일 10.51·꺼짐 5.55 / 밝음 켜짐 14.16·요일 7.87·꺼짐 5.30. */
-.panel { --al-on:#f4ecdc; --al-tag:#e3c88f; --al-off:#9a9284; --al-tag-bg:transparent;
+   어두움 켜짐 14.54·요일 10.51·꺼짐 3.35 / 밝음 켜짐 14.16·요일 7.87·꺼짐 3.28.
+   1.4.5-2(형 46110): 꺼진 줄(시각·이름·요일 글자)을 더 연하게 — 켜진 줄과 한눈에 구분되게(대비 3 이상은 유지).
+   밝은 패널의 요일 글자 바탕(금색 알약)은 없앰 — 다크처럼 글자만(형 46114: 다크는 그대로). */
+.panel { --al-on:#f4ecdc; --al-tag:#e3c88f; --al-off:#746d61; --al-tag-bg:transparent;
          --sw-bg:rgba(255,255,255,.03); --sw-sh:2px 2px 9px rgba(0,0,0,.32), -2px -2px 9px rgba(255,255,255,.035);
          --gv-sh:inset 2px 2px 5px rgba(0,0,0,.55), inset -1px -1px 4px rgba(255,255,255,.07);
          --kn-off:#6f6758; --kn-on:#e3c88f; --sw-ring:#e3c88f;
          --chip-on-fg:#e3c88f; --chip-on-br:rgba(227,200,143,.7); --chip-on-bg:rgba(227,200,143,.13); }
-body.panel-light .panel { --al-on:#1a160e; --al-tag:#5a3f0e; --al-off:#665a44; --al-tag-bg:#f5e6bd;
+body.panel-light .panel { --al-on:#1a160e; --al-tag:#5a3f0e; --al-off:#857b69; --al-tag-bg:transparent;
          --sw-bg:rgba(255,255,255,.35); --sw-sh:2px 2px 9px rgba(0,0,0,.09), -2px -2px 9px rgba(255,255,255,.45);
          --gv-sh:inset 1px 1px 4px rgba(0,0,0,.14), inset -1px -1px 4px rgba(255,255,255,.6);
          --kn-off:#c9c1b1; --kn-on:#d9b25a; --sw-ring:#8a6a2f;
@@ -214,23 +219,27 @@ body.panel-light .panel { --al-on:#1a160e; --al-tag:#5a3f0e; --al-off:#665a44; -
 .setting-row { display:flex; align-items:center; justify-content:space-between; padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.08); font-size:12px; color:#b8b8b8; }
 .setting-row:last-child { border-bottom:none; }
 .setting-row .toggle { margin:-1px 0; }   /* 새 스위치(18px)가 옛 것(16px)보다 2px 높아 줄 높이가 그대로 되게 */
-/* 1.4.5-2: 설정 막대 3개(크기·밝기·패널 투명도) — 형 46102 CSS(.slider/.level): 아이콘 없이 막대만, 두께 6px·끝 둥글게(999px),
-   채움은 0 크기 손잡이의 그림자(-200px 0 0 200px)로 왼쪽부터 값만큼, 마우스 올리면 두께 2배(.1s).
-   막대 폭 70px(그림자 200px 이하라 끝값에서 모자람 없음). 감싸는 .slider 높이를 옛 기본 막대와 같은 16px 로 고정해 줄 높이가 그대로이고, 두꺼워져도 줄 높이·옆 숫자가 안 움직인다.
-   색: 다크는 형 값 그대로(바탕 rgb(82,82,82)·채움 #fff), 라이트는 같은 대비로 뒤집음(바탕 연회색·채움 진회색). */
-.slider { --slider-width:70px; --slider-height:6px; --slider-bg:rgb(82,82,82); --slider-border-radius:999px; --level-color:#fff; --level-transition-duration:.1s;
+/* 1.4.5-2: 설정 막대 3개(크기·밝기·패널 투명도) — 형 46102 CSS(.slider/.level) 바탕: 아이콘 없이 막대만, 끝 둥글게(999px),
+   채움은 0 크기 손잡이의 그림자(-200px 0 0 200px)로 왼쪽부터 값만큼. 막대 폭 70px(그림자 200px 이하라 끝값에서 모자람 없음).
+   형 46110: 평소 두께 3px(옛 6px 의 절반) → 마우스 올리면 6px, 세 막대 모두 같게.
+   · 보이는 막대는 입력칸 안쪽 줄(::-webkit-slider-runnable-track)이 그린다(overflow:hidden 이 손잡이 그림자를 막대 모양으로 자름).
+     입력칸 자체는 16px 높이 투명 — 누르고 끄는 자리는 막대가 가늘어져도 16px 그대로다.
+   · 배율 1.25·1.5 에서 3px·6px 이 기기 픽셀로 3.75·7.5 처럼 떨어지면 막대 위치에 따라 반올림이 달라져 어떤 막대만 두꺼워 보였다(형 사진).
+     alignSliders() 가 두께를 기기 픽셀 정수로, 위치를 기기 픽셀 경계에 맞춘다(--bar-h/--bar-hh 두께, --bar-o/--bar-oh 위치 보정). */
+.slider { --slider-width:70px; --slider-bg:rgb(82,82,82); --slider-border-radius:999px; --level-color:#fff; --level-transition-duration:.1s;
   cursor:pointer; display:inline-flex; align-items:center; height:16px; }   /* 16px = 옛 기본 막대 높이 → 줄 높이(31px) 그대로 */
 body.panel-light .panel .slider { --slider-bg:rgb(190,190,190); --level-color:#333; }
 .slider .level { -webkit-appearance:none; appearance:none; margin:0; padding:0; border:0; outline:none; display:block;
-  width:var(--slider-width); height:var(--slider-height); background:var(--slider-bg); overflow:hidden; border-radius:var(--slider-border-radius);
-  transition:height var(--level-transition-duration), background-color .3s ease; cursor:inherit; }
-.slider .level::-webkit-slider-runnable-track { -webkit-appearance:none; height:100%; background:transparent; border:0; }
+  width:var(--slider-width); height:16px; background:transparent; cursor:inherit; }
+.slider .level::-webkit-slider-runnable-track { -webkit-appearance:none; border:0; position:relative;
+  height:var(--bar-h,3px); top:var(--bar-o,0px); background:var(--slider-bg); border-radius:var(--slider-border-radius); overflow:hidden;
+  transition:height var(--level-transition-duration), top var(--level-transition-duration), background-color .3s ease; }
+.slider:hover .level::-webkit-slider-runnable-track, .slider .level:active::-webkit-slider-runnable-track { height:var(--bar-hh,6px); top:var(--bar-oh,0px); }
 .slider .level::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:0; height:0; border:0;
   box-shadow:-200px 0 0 200px var(--level-color); transition:box-shadow .3s ease; }
-.slider:hover .level, .slider .level:active { height:calc(var(--slider-height) * 2); }
-.slider .level:focus-visible { outline:2px solid var(--sw-ring); outline-offset:2px; }
-body.color-fade .panel .slider .level { transition:height var(--level-transition-duration), background-color .6s ease !important; }
-body.color-fade-fast .panel .slider .level { transition:height var(--level-transition-duration), background-color .12s ease !important; }
+.slider .level:focus-visible { outline:2px solid var(--sw-ring); outline-offset:1px; border-radius:4px; }
+body.color-fade .panel .slider .level::-webkit-slider-runnable-track { transition:height var(--level-transition-duration), top var(--level-transition-duration), background-color .6s ease; }
+body.color-fade-fast .panel .slider .level::-webkit-slider-runnable-track { transition:height var(--level-transition-duration), top var(--level-transition-duration), background-color .12s ease; }
 body.color-fade .panel .slider .level::-webkit-slider-thumb { transition:box-shadow .6s ease; }
 body.color-fade-fast .panel .slider .level::-webkit-slider-thumb { transition:box-shadow .12s ease; }
 select { background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:5px; color:#b8b8b8; padding:3px 6px; font-size:11px; outline:none; cursor:pointer; }
@@ -1875,6 +1884,31 @@ try{
     changeBrightness(DEF_BRIGHT);
   }catch(e2){}
 }
+
+// 1.4.5-2(형 46110): 설정 막대 두께·위치를 기기 픽셀에 맞춤 — 배율 1.25·1.5 에서도 세 막대가 같은 두께로 보이게.
+// 두께(평소 3px·올림 6px)를 기기 픽셀 정수로 반올림하고, 막대 윗변이 기기 픽셀 경계에 오도록 위치를 조금 옮긴다.
+// 모양만 바꾸고 값·저장은 건드리지 않는다.
+function alignSliders(){
+  const d=window.devicePixelRatio||1;
+  document.querySelectorAll('.slider .level').forEach(e=>{
+    const r=e.getBoundingClientRect(); if(!r.height) return;
+    const v=[3,6].map(px=>{ const h=Math.max(1,Math.round(px*d))/d; const t=(r.top+(r.height-h)/2)*d; return [h,(Math.round(t)-t)/d]; });
+    e.style.setProperty('--bar-h',v[0][0]+'px'); e.style.setProperty('--bar-o',v[0][1]+'px');
+    e.style.setProperty('--bar-hh',v[1][0]+'px'); e.style.setProperty('--bar-oh',v[1][1]+'px');
+  });
+}
+(function(){
+  const run=()=>requestAnimationFrame(alignSliders);
+  window.addEventListener('resize',run);
+  let mq=null; const watchDpr=()=>{ try{ if(mq) mq.removeEventListener('change',onDpr); mq=matchMedia(`(resolution: ${window.devicePixelRatio||1}dppx)`); mq.addEventListener('change',onDpr); }catch(e){} };
+  function onDpr(){ watchDpr(); run(); }
+  watchDpr();
+  try{ const ro=new ResizeObserver(run); ro.observe(document.body); document.querySelectorAll('.panel').forEach(p=>ro.observe(p)); }catch(e){}
+  document.querySelectorAll('.slider').forEach(s=>s.addEventListener('pointerenter',alignSliders));
+  const op=openPanel; openPanel=function(){ const r=op.apply(this,arguments); run(); return r; };
+  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(run);
+  run();
+})();
 
 // 업데이트 안내 (다른 초기화가 전부 끝난 뒤 마지막에 판단)
 // 버전을 Rust에서 받아와야 해서 비동기 — 실패해도 폴백이 잡아주므로 안내는 반드시 판정된다.

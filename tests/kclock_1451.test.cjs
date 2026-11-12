@@ -139,7 +139,8 @@ const DESK = { dark: '#303746', light: '#c4c9d0' };
     }
     const fmt = Object.entries(min).map(([k, r]) => k + ' ' + r.toFixed(2)).join(', ');
     ok(['on·시간', 'on·이름', 'on·요일'].every((k) => min[k] >= 7), `켜짐 대비 ≥ 7 (${mode})`, fmt);
-    ok(['off·시간', 'off·이름', 'off·요일'].every((k) => min[k] >= 4.5), `꺼짐 대비 ≥ 4.5 (${mode})`, fmt);
+    // 1.4.5-2 2차(형 46110 «해제된 알람은 좀 더 연하게»): 꺼진 줄은 일부러 가라앉힘 — 읽을 수 있는 선(3.0 이상)·켜짐(4.5 이상)보다 확실히 낮게(켜짐의 1/3 이하)
+    ok(['off·시간', 'off·이름', 'off·요일'].every((k) => min[k] >= 3.0 && min[k] < 4.0 && min[k] * 3 <= min['on·시간']), `꺼짐 대비 3.0~4.0(읽히되 켜짐과 확실히 구분) (${mode})`, fmt);
     const diff = vals.find((v) => v.st === 'on' && v.n === '이름').color !== vals.find((v) => v.st === 'off' && v.n === '이름').color;
     ok(diff, `켜짐·꺼짐 글씨색이 다름 (${mode}) — 예전엔 같았음`);
     await shot(`app_alarm_${mode}_v2.png`, '#panel-alarm');

@@ -155,6 +155,39 @@ async function setup(page, mode) {
     ok(vals.length >= 2 && vals.every(([, v]) => /^Pretendard/.test(v) && !/Consolas|Courier|Menlo|Mono/i.test(v)), '카운트 숫자·버튼 실제 그려진 글꼴 = Pretendard(고정폭 글꼴 아님)', JSON.stringify(used));
     ok(/^"Pretendard KR"/.test(fam.d) && /tabular-nums/.test(fam.n), '카운트 큰 숫자 계산된 글꼴 Pretendard KR·숫자 폭 고정', `${fam.d} · ${fam.n}`);
   }
+  // ── 4-2) 카운트 저장 칸 이름 글씨(형 46117): 크기 11px · 대비 ≥4.5(다크·라이트) · 시각보다 한 단계만 옅음 · 안 잘림 · 골드 상태 그대로 ──
+  await page.evaluate(() => { cdPresets = [{ sec: 300, name: '테스트' }, { sec: 600, name: '라면 끓이기 긴이름' }, null, null]; renderCdPresets(); });
+  const prMeasure = {};
+  for (const mode of ['dark', 'light']) {
+    await setup(page, mode);
+    await page.evaluate(() => openPanel('countdown'));
+    await page.mouse.move(2, 2); await page.waitForTimeout(700);
+    const info = await page.evaluate(() => {
+      const bs = document.querySelectorAll('#cd-preset-row .cd-preset');
+      const b = bs[0], n = b.querySelector('.p-name'), t = b.querySelector('.p-time'), n2 = bs[1].querySelector('.p-name');
+      const cn = getComputedStyle(n), r = (e) => { const q = e.getBoundingClientRect(); return [q.x, q.y, q.width, q.height]; };
+      return { nc: cn.color, op: +cn.opacity, size: cn.fontSize, tc: getComputedStyle(t).color, btn: r(b), nameR: r(n), timeR: r(t), nameOverflow: n.scrollWidth > n.clientWidth, ell: getComputedStyle(n2).textOverflow, longClipped: n2.scrollWidth > n2.clientWidth, btnH: b.getBoundingClientRect().height };
+    });
+    const shot = await page.screenshot({ clip: { x: info.btn[0], y: info.btn[1], width: info.btn[2], height: info.btn[3] } });
+    // 칸 바탕: 칸 오른쪽 아래 안쪽 빈 픽셀을 사진에서 직접 읽음
+    const bgPx = await page.evaluate(async (b64) => { const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode(); const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const g = c.getContext('2d'); g.drawImage(img, 0, 0); return Array.from(g.getImageData(img.width - 10, img.height - 12, 1, 1).data).slice(0, 3); }, shot.toString('base64'));
+    const nc = info.nc.match(/[\d.]+/g).map(Number);
+    const eff = [0, 1, 2].map((k) => nc[k] * info.op + bgPx[k] * (1 - info.op));
+    const crN = cr(`rgb(${eff.join(',')})`, `rgb(${bgPx.join(',')})`), crT = cr(info.tc, `rgb(${bgPx.join(',')})`);
+    prMeasure[mode] = { crN, crT };
+    ok(info.size === '11px', `저장 칸 이름 글씨 크기 11px (${mode})`, info.size);
+    ok(crN >= 4.5, `저장 칸 이름 글씨 대비 ≥4.5 (${mode})`, `이름 ${crN.toFixed(2)} · 시각 ${crT.toFixed(2)} · 바탕 ${bgPx.join(',')}`);
+    ok(crN < crT, `이름은 시각보다 한 단계만 옅음 (${mode})`, `${crN.toFixed(2)} < ${crT.toFixed(2)}`);
+    const inside = (rc) => rc[1] >= info.btn[1] - 0.01 && rc[1] + rc[3] <= info.btn[1] + info.btn[3] + 0.01;
+    ok(info.btnH === 38 && inside(info.nameR) && inside(info.timeR) && info.timeR[1] + info.timeR[3] <= info.nameR[1] + 0.5, `칸 높이 38px 안에서 시각·이름 두 줄 안 잘림 (${mode})`, `칸 ${info.btn[1].toFixed(1)}~${(info.btn[1] + info.btn[3]).toFixed(1)} · 시각 ${info.timeR[1].toFixed(1)}~${(info.timeR[1] + info.timeR[3]).toFixed(1)} · 이름 ${info.nameR[1].toFixed(1)}~${(info.nameR[1] + info.nameR[3]).toFixed(1)}`);
+    ok(info.longClipped && info.ell === 'ellipsis' && !info.nameOverflow, `긴 이름은 말줄임(…) 그대로, 짧은 이름은 안 잘림 (${mode})`, `말줄임 ${info.ell}`);
+  }
+  // 골드 «고르는 중»·«편집 중» 색 그대로
+  {
+    await setup(page, 'dark');
+    const g = await page.evaluate(() => { const bs = document.querySelectorAll('#cd-preset-row .cd-preset'); bs[0].classList.add('pick'); const a = getComputedStyle(bs[0].querySelector('.p-name')).color; bs[0].classList.remove('pick'); bs[0].classList.add('editing'); const b = getComputedStyle(bs[0].querySelector('.p-name')).color; bs[0].classList.remove('editing'); return [a, b]; });
+    ok(g[0] === 'rgb(201, 163, 92)' && g[1] === 'rgb(201, 163, 92)', '고르는 중·편집 중 이름 글씨 골드 그대로', g.join(' / '));
+  }
   ok(errors.length === 0, '페이지 오류 없음', errors.join(' | '));
   await ctx.close();
   await browser.close();

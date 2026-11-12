@@ -194,7 +194,7 @@ body.panel-light .panel { --al-on:#1a160e; --al-tag:#5a3f0e; --al-off:#857b69; -
 .cd-preset { flex:1; min-width:0; height:38px; position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:0 2px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:5px; color:#b8b8b8; cursor:pointer; overflow:hidden; }
 .cd-preset:hover { background:rgba(255,255,255,0.14); }
 .cd-preset .p-time { font-size:12px; font-family:inherit; line-height:1.1; max-width:100%; overflow:hidden; white-space:nowrap; }
-.cd-preset .p-name { font-size:10px; color:rgba(184,184,184,0.6); line-height:1.1; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cd-preset .p-name { font-size:11px; color:rgba(184,184,184,0.6); line-height:1.1; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .cd-preset.empty { background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.15); color:rgba(255,255,255,0.25); font-size:14px; cursor:pointer; }
 .cd-preset.empty:hover { background:rgba(255,255,255,0.07); }
 .cd-preset.pick { border-color:#c9a35c; color:#c9a35c; }
@@ -279,7 +279,7 @@ select option { background:#1e1e1e; color:#b8b8b8; }
    각 .panel 에 --pfg(글자)·--pmenu(드롭다운 바탕)·--phover 를 넣는다. 인라인으로 칠하던 기존
    목록에 없던 것들만 여기서 받는다(선택·수정 중인 금색 상태는 건드리지 않도록 :not 으로 뺌). */
 .panel .cd-preset:not(.pick):not(.editing) { color:var(--pfg,#b8b8b8); }
-.panel .cd-preset:not(.pick):not(.editing) .p-name { color:var(--pfg,#b8b8b8); opacity:0.6; }
+.panel .cd-preset:not(.pick):not(.editing) .p-name { color:var(--pfg,#b8b8b8); opacity:0.72; }
 .panel .cd-preset.empty:not(.pick):not(.editing) { opacity:0.45; }
 .panel .cd-hint:not(.picking) { color:var(--pfg,#b8b8b8); }
 .panel .cd-save-btn:not(.picking):not(.editing) { color:var(--pfg,#b8b8b8); }

@@ -205,7 +205,8 @@ const TEAL = ['rgb(68, 170, 153)', 'rgba(68, 170, 153, 0.14)'];
   await setDesk('dark'); await page.waitForTimeout(800);
   const sw = await page.evaluate(() => { const b = document.querySelector('#alarm-list .alarm-toggle'); return getComputedStyle(b).backgroundColor; });
   const sv = sw.match(/[\d.]+/g).map(Number);
-  ok(sv.length === 4 && sv[3] <= 0.05 && Math.max(sv[0], sv[1], sv[2]) - Math.min(sv[0], sv[1], sv[2]) <= 2, '다크 스위치 몸통 = 거의 투명한 무채색(패널 바탕이 비침)', sw);
+  // 1.4.5-3(형 46135 ④): 몸통을 살짝 밝게(.03→.06) — 여전히 패널 바탕이 비치는 옅은 무채색(≤ .08). 테두리는 tests/kclock_1453.test.cjs
+  ok(sv.length === 4 && sv[3] <= 0.08 && Math.max(sv[0], sv[1], sv[2]) - Math.min(sv[0], sv[1], sv[2]) <= 2, '다크 스위치 몸통 = 거의 투명한 무채색(패널 바탕이 비침)', sw);
 
   // ── 6) 가장 작은 창(패널 300px)에서 잘림·줄바꿈 없음 ──
   for (const mode of ['dark', 'light']) {

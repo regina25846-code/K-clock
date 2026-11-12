@@ -111,7 +111,7 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
    1.4.5-2(형 46110): 꺼진 줄(시각·이름·요일 글자)을 더 연하게 — 켜진 줄과 한눈에 구분되게(대비 3 이상은 유지).
    밝은 패널의 요일 글자 바탕(금색 알약)은 없앰 — 다크처럼 글자만(형 46114: 다크는 그대로). */
 .panel { --al-on:#f4ecdc; --al-tag:#e3c88f; --al-off:#746d61; --al-tag-bg:transparent;
-         --sw-bg:rgba(255,255,255,.03); --sw-sh:2px 2px 9px rgba(0,0,0,.32), -2px -2px 9px rgba(255,255,255,.035);
+         --sw-bg:rgba(255,255,255,.06); --sw-edge:rgba(255,255,255,.2); --sw-sh:2px 2px 9px rgba(0,0,0,.32), -2px -2px 9px rgba(255,255,255,.035);
          --gv-sh:inset 2px 2px 5px rgba(0,0,0,.55), inset -1px -1px 4px rgba(255,255,255,.07);
          --kn-off:#6f6758; --kn-on:#e3c88f; --sw-ring:#e3c88f;
          --chip-on-fg:#e3c88f; --chip-on-br:rgba(227,200,143,.7); --chip-on-bg:rgba(227,200,143,.13); }
@@ -120,6 +120,10 @@ body.panel-light .panel { --al-on:#1a160e; --al-tag:#5a3f0e; --al-off:#857b69; -
          --gv-sh:inset 1px 1px 4px rgba(0,0,0,.14), inset -1px -1px 4px rgba(255,255,255,.6);
          --kn-off:#c9c1b1; --kn-on:#d9b25a; --sw-ring:#8a6a2f;
          --chip-on-fg:#5a3f0e; --chip-on-br:#d9b25a; --chip-on-bg:#f5e6bd; }
+/* 1.4.5-3(형 46135 ④): 다크는 스위치 몸통 둘레가 패널에 묻혀 안 보였다(대비 1.04~1.10) — 라이트처럼 «홈 경계가 또렷하게»
+   밝은 회색 가는 테(금색 아님)를 두르고 몸통도 살짝 밝게(.03→.06). 테는 몸통 위 겹 그림(::before)이라 크기·동그라미 자리는 그대로.
+   라이트는 위 값 그대로 두고 테만 투명(바뀌는 픽셀 없음). 대비(바탕화면 #303746, 투명도 0·50·100) 시안 kclock_1453_mock. */
+body.panel-light .panel { --sw-edge:transparent; }
 .alarm-item.on, .alarm-item.off { font-family:'Pretendard KR','Segoe UI',sans-serif; font-size:13px; letter-spacing:-0.01em; }
 .alarm-item.on { color:var(--al-on); }
 .alarm-item.off { color:var(--al-off); }
@@ -139,6 +143,7 @@ body.panel-light .panel { --al-on:#1a160e; --al-tag:#5a3f0e; --al-off:#857b69; -
 .alarm-toggle, .toggle { --gx:3px; --gy:2px; --gw:30px; --gh:14px; --pad:2px; --kd:calc(var(--gh) - 2 * var(--pad));
   width:36px; height:18px; border-radius:30px; position:relative; border:0; padding:0; flex-shrink:0; cursor:pointer;
   background:var(--sw-bg); box-shadow:var(--sw-sh); outline:none; font:inherit; transition:background-color .3s ease, box-shadow .3s ease; }
+:is(.alarm-toggle, .toggle)::before { content:''; position:absolute; inset:0; border-radius:inherit; border:1px solid var(--sw-edge); pointer-events:none; transition:border-color .3s ease; }
 :is(.alarm-toggle, .toggle) .gv { position:absolute; left:var(--gx); top:var(--gy); width:var(--gw); height:var(--gh); border-radius:30px; pointer-events:none;
   box-shadow:var(--gv-sh); transition:box-shadow .3s ease; }
 :is(.alarm-toggle, .toggle) .kn { position:absolute; top:calc(var(--gy) + var(--pad)); left:calc(var(--gx) + var(--pad)); width:var(--kd); height:var(--kd); border-radius:50%; z-index:1; pointer-events:none;
@@ -311,6 +316,8 @@ body.color-fade-fast .panel, body.color-fade-fast .panel * { transition:color .1
 body.color-fade :is(.alarm-toggle, .toggle) .kn, body.color-fade-fast :is(.alarm-toggle, .toggle) .kn { transition:all 0.3s ease-in !important; }
 body.color-fade .panel :is(.alarm-toggle, .toggle), body.color-fade .panel :is(.alarm-toggle, .toggle) .gv { transition:background-color .6s ease, box-shadow .6s ease !important; }
 body.color-fade-fast .panel :is(.alarm-toggle, .toggle), body.color-fade-fast .panel :is(.alarm-toggle, .toggle) .gv { transition:background-color .12s ease, box-shadow .12s ease !important; }
+body.color-fade .panel :is(.alarm-toggle, .toggle)::before { transition:border-color .6s ease !important; }
+body.color-fade-fast .panel :is(.alarm-toggle, .toggle)::before { transition:border-color .12s ease !important; }
 
 @keyframes flash { 0%,100%{opacity:1} 50%{opacity:0.15} }
 .flashing { animation:flash 0.5s ease-in-out infinite; }

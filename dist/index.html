@@ -214,6 +214,25 @@ body.panel-light .panel { --al-on:#1a160e; --al-tag:#5a3f0e; --al-off:#665a44; -
 .setting-row { display:flex; align-items:center; justify-content:space-between; padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.08); font-size:12px; color:#b8b8b8; }
 .setting-row:last-child { border-bottom:none; }
 .setting-row .toggle { margin:-1px 0; }   /* 새 스위치(18px)가 옛 것(16px)보다 2px 높아 줄 높이가 그대로 되게 */
+/* 1.4.5-2: 설정 막대 3개(크기·밝기·패널 투명도) — 형 46102 CSS(.slider/.level): 아이콘 없이 막대만, 두께 6px·끝 둥글게(999px),
+   채움은 0 크기 손잡이의 그림자(-200px 0 0 200px)로 왼쪽부터 값만큼, 마우스 올리면 두께 2배(.1s).
+   막대 폭 70px(그림자 200px 이하라 끝값에서 모자람 없음). 감싸는 .slider 높이를 옛 기본 막대와 같은 16px 로 고정해 줄 높이가 그대로이고, 두꺼워져도 줄 높이·옆 숫자가 안 움직인다.
+   색: 다크는 형 값 그대로(바탕 rgb(82,82,82)·채움 #fff), 라이트는 같은 대비로 뒤집음(바탕 연회색·채움 진회색). */
+.slider { --slider-width:70px; --slider-height:6px; --slider-bg:rgb(82,82,82); --slider-border-radius:999px; --level-color:#fff; --level-transition-duration:.1s;
+  cursor:pointer; display:inline-flex; align-items:center; height:16px; }   /* 16px = 옛 기본 막대 높이 → 줄 높이(31px) 그대로 */
+body.panel-light .panel .slider { --slider-bg:rgb(190,190,190); --level-color:#333; }
+.slider .level { -webkit-appearance:none; appearance:none; margin:0; padding:0; border:0; outline:none; display:block;
+  width:var(--slider-width); height:var(--slider-height); background:var(--slider-bg); overflow:hidden; border-radius:var(--slider-border-radius);
+  transition:height var(--level-transition-duration), background-color .3s ease; cursor:inherit; }
+.slider .level::-webkit-slider-runnable-track { -webkit-appearance:none; height:100%; background:transparent; border:0; }
+.slider .level::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:0; height:0; border:0;
+  box-shadow:-200px 0 0 200px var(--level-color); transition:box-shadow .3s ease; }
+.slider:hover .level, .slider .level:active { height:calc(var(--slider-height) * 2); }
+.slider .level:focus-visible { outline:2px solid var(--sw-ring); outline-offset:2px; }
+body.color-fade .panel .slider .level { transition:height var(--level-transition-duration), background-color .6s ease !important; }
+body.color-fade-fast .panel .slider .level { transition:height var(--level-transition-duration), background-color .12s ease !important; }
+body.color-fade .panel .slider .level::-webkit-slider-thumb { transition:box-shadow .6s ease; }
+body.color-fade-fast .panel .slider .level::-webkit-slider-thumb { transition:box-shadow .12s ease; }
 select { background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:5px; color:#b8b8b8; padding:3px 6px; font-size:11px; outline:none; cursor:pointer; }
 select option { background:#1e1e1e; color:#b8b8b8; }
 /* 네이티브 select의 옵션 목록은 OS 별도 팝업 창으로 뜨는데, 시계 창이 항상위(topmost)라
@@ -373,7 +392,7 @@ body.color-fade-fast .panel :is(.alarm-toggle, .toggle), body.color-fade-fast .p
     <div class="setting-row">
       <span>크기</span>
       <div style="display:flex;align-items:center;gap:5px">
-        <input type="range" min=10 max=100 value=70 id="size-slider" style="width:70px;accent-color:#888" oninput="previewSize(this.value)" onchange="changeSize(this.value)">
+        <span class="slider"><input type="range" class="level" min=10 max=100 value=70 id="size-slider" oninput="previewSize(this.value)" onchange="changeSize(this.value)"></span>
         <span id="size-val" style="font-size:11px;min-width:22px;text-align:right">70</span>
       </div>
     </div>
@@ -383,14 +402,14 @@ body.color-fade-fast .panel :is(.alarm-toggle, .toggle), body.color-fade-fast .p
     <div class="setting-row">
       <span>밝기</span>
       <div style="display:flex;align-items:center;gap:5px">
-        <input type="range" min=0 max=255 value=220 id="brightness-slider" style="width:70px;accent-color:#888" oninput="changeBrightness(this.value);document.getElementById('bright-val').textContent=this.value">
+        <span class="slider"><input type="range" class="level" min=0 max=255 value=220 id="brightness-slider" oninput="changeBrightness(this.value);document.getElementById('bright-val').textContent=this.value"></span>
         <span id="bright-val" style="font-size:11px;min-width:22px;text-align:right">220</span>
       </div>
     </div>
     <div class="setting-row">
       <span>패널 투명도</span>
       <div style="display:flex;align-items:center;gap:5px">
-        <input type="range" min=0 max=100 value=50 id="panel-opacity-slider" style="width:70px;accent-color:#888" oninput="changePanelOpacity(this.value);document.getElementById('panel-op-val').textContent=this.value">
+        <span class="slider"><input type="range" class="level" min=0 max=100 value=50 id="panel-opacity-slider" oninput="changePanelOpacity(this.value);document.getElementById('panel-op-val').textContent=this.value"></span>
         <span id="panel-op-val" style="font-size:11px;min-width:22px;text-align:right">50</span>
       </div>
     </div>

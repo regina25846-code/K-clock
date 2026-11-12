@@ -102,10 +102,12 @@ body { background:transparent; font-family:'Segoe UI',sans-serif; overflow:hidde
    색은 패널 바탕(검정/흰색 — body.panel-light)에 따라 아래 변수로 바뀐다. 대비(패널 50% 기준):
    어두움 켜짐 14.54·요일 10.51·꺼짐 5.55 / 밝음 켜짐 14.16·요일 7.87·꺼짐 5.30. */
 .panel { --al-on:#f4ecdc; --al-tag:#e3c88f; --al-off:#9a9284; --al-tag-bg:transparent; --al-tag-pad:0;
-         --sw-bg:#2a2722; --sw-o1:#12110e; --sw-o2:#3b3730; --sw-i1:#0c0b09; --sw-i2:rgba(255,236,200,.16);
+         --sw-bg:#2a2722; --sw-sh:5px 5px 17px #111111, -5px -5px 17px #383838;
+         --gv-sh:inset 2px 2px 6px #0b0b0b, inset -2px -2px 4px rgba(255,255,255,.08);
          --kn-off:#6f6758; --kn-on:#e3c88f; --sw-ring:#e3c88f; }
 body.panel-light .panel { --al-on:#1a160e; --al-tag:#5a3f0e; --al-off:#665a44; --al-tag-bg:#f5e6bd; --al-tag-pad:1px 7px;
-         --sw-bg:#f3ede0; --sw-o1:#bdb5a4; --sw-o2:#ffffff; --sw-i1:#b7ad98; --sw-i2:#ffffffbd;
+         --sw-bg:rgba(255,255,255,.35); --sw-sh:2px 2px 9px rgba(0,0,0,.09), -2px -2px 9px rgba(255,255,255,.45);
+         --gv-sh:inset 1px 1px 4px rgba(0,0,0,.14), inset -1px -1px 4px rgba(255,255,255,.6);
          --kn-off:#c9c1b1; --kn-on:#d9b25a; --sw-ring:#8a6a2f; }
 .alarm-item.on, .alarm-item.off { font-family:'Pretendard KR','Segoe UI',sans-serif; font-size:13px; letter-spacing:-0.01em; }
 .alarm-item.on { color:var(--al-on); }
@@ -118,17 +120,21 @@ body.panel-light .panel { --al-on:#1a160e; --al-tag:#5a3f0e; --al-off:#665a44; -
 .alarm-item input[type=text] { flex:1; min-width:0; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:5px; color:#b8b8b8; padding:3px 4px; font-size:11px; outline:none; font-family:inherit; }
 .alarm-edit-btn { flex-shrink:0; width:20px; height:20px; padding:0; background:rgba(255,255,255,0.10); color:#b8b8b8; border:1px solid rgba(255,255,255,0.15); border-radius:5px; font-size:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
 /* 스위치 — 형 46039 CSS(60×30 몸통·50×20 오목한 홈·20 동그라미, 0.3s ease-in, 켜지면 미끄러지며 220도)를
-   알람 줄 높이에 맞게 0.6배. 동그라미에 비스듬한 윤기를 얹어 도는 게 보이게 했다. */
-.alarm-toggle { width:36px; height:18px; border-radius:30px; position:relative; border:0; padding:0; flex-shrink:0; cursor:pointer;
-  background:var(--sw-bg); box-shadow:5px 5px 17px var(--sw-o1), -5px -5px 17px var(--sw-o2); outline:none; font:inherit; }
-.alarm-toggle .gv { position:absolute; left:3px; top:3px; width:30px; height:12px; border-radius:30px; pointer-events:none;
-  box-shadow:inset 2px 2px 6px var(--sw-i1), inset -2px -2px 3px var(--sw-i2); }
-.alarm-toggle .kn { position:absolute; top:3px; left:3px; width:12px; height:12px; border-radius:50%; z-index:1; pointer-events:none;
+   알람 줄 높이에 맞게 0.6배. 동그라미에 비스듬한 윤기를 얹어 도는 게 보이게 했다.
+   형 46053: 동그라미는 홈 안에 위·아래·왼쪽·오른쪽 같은 여백(--pad)으로, 켜짐 자리는 홈 폭−동그라미−여백 으로 계산
+   (좌우 대칭). 홈 자리·크기·여백은 화면 배율에 맞춰 기기 픽셀로 반올림(swAlignToDevicePx). 형 46056: 그림자는 무채색.
+   형 46058: 밝은 바탕에서 몸통·홈 둘레가 선처럼 져 보여, 몸통은 반투명 흰색(바탕과 이어짐)+옅고 넓게 번지는 그림자, 홈 테도 옅게. */
+.alarm-toggle { --gx:3px; --gy:2px; --gw:30px; --gh:14px; --pad:2px; --kd:calc(var(--gh) - 2 * var(--pad));
+  width:36px; height:18px; border-radius:30px; position:relative; border:0; padding:0; flex-shrink:0; cursor:pointer;
+  background:var(--sw-bg); box-shadow:var(--sw-sh); outline:none; font:inherit; }
+.alarm-toggle .gv { position:absolute; left:var(--gx); top:var(--gy); width:var(--gw); height:var(--gh); border-radius:30px; pointer-events:none;
+  box-shadow:var(--gv-sh); }
+.alarm-toggle .kn { position:absolute; top:calc(var(--gy) + var(--pad)); left:calc(var(--gx) + var(--pad)); width:var(--kd); height:var(--kd); border-radius:50%; z-index:1; pointer-events:none;
   background:var(--kn-off) linear-gradient(135deg, rgba(255,255,255,.55) 0 28%, rgba(255,255,255,0) 62%); transition:all 0.3s ease-in; }
-.alarm-toggle.on .kn { left:20.4px; background-color:var(--kn-on); transform:rotate(220deg); transition:0.3s ease-in; }
+.alarm-toggle.on .kn { left:calc(var(--gx) + var(--gw) - var(--kd) - var(--pad)); background-color:var(--kn-on); transform:rotate(220deg); transition:0.3s ease-in; }
 .alarm-toggle:active .kn { transform:scale(.88); }
 .alarm-toggle.on:active .kn { transform:rotate(220deg) scale(.88); }
-.alarm-toggle:focus-visible { box-shadow:5px 5px 17px var(--sw-o1), -5px -5px 17px var(--sw-o2), 0 0 0 2px var(--sw-ring); }
+.alarm-toggle:focus-visible { box-shadow:var(--sw-sh), 0 0 0 2px var(--sw-ring); }
 .alarm-del { background:none; border:none; color:rgba(255,80,80,0.6); cursor:pointer; font-size:12px; padding:0 2px; flex-shrink:0; }
 .empty-msg { font-size:11px; color:#777; padding:4px 0; }
 
@@ -984,6 +990,18 @@ function addAlarm(){
   renderAlarms();
 }
 // 목록을 다시 그리지 않고 그 줄만 바꾼다 — 다시 그리면 스위치 동그라미가 미끄러지는 움직임이 안 보인다(1.4.5-1)
+// 스위치 홈·동그라미를 기기 픽셀에 맞춤(형 46053) — 배율 1.25·1.5 에서 2px 가 2.5 기기픽셀처럼 반쪽이 되면
+// 위아래·좌우 여백이 한 픽셀씩 달라 보인다. 기본값(CSS)을 배율에 맞춰 반올림하고, 모니터를 옮겨 배율이 바뀌면 다시 맞춘다.
+function swDevicePx(cssPx, dpr){ return Math.max(1, Math.round(cssPx*dpr))/dpr; }
+function swAlignToDevicePx(){
+  const dpr=window.devicePixelRatio||1;
+  let el=document.getElementById('sw-align');
+  if(!el){ el=document.createElement('style'); el.id='sw-align'; document.head.appendChild(el); }
+  const v=(n)=>swDevicePx(n,dpr)+'px';
+  el.textContent=`.alarm-toggle{--gx:${v(3)};--gy:${v(2)};--gw:${v(30)};--gh:${v(14)};--pad:${v(2)};}`;
+  try{ matchMedia(`(resolution: ${dpr}dppx)`).addEventListener('change', swAlignToDevicePx, {once:true}); }catch(e){}
+}
+swAlignToDevicePx();
 function toggleAlarm(id){
   const a=alarms.find(x=>x.id===id); if(!a) return;
   a.enabled=!a.enabled; saveAlarms();

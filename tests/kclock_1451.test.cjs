@@ -142,7 +142,7 @@ const DESK = { dark: '#303746', light: '#c4c9d0' };
     ok(['off·시간', 'off·이름', 'off·요일'].every((k) => min[k] >= 4.5), `꺼짐 대비 ≥ 4.5 (${mode})`, fmt);
     const diff = vals.find((v) => v.st === 'on' && v.n === '이름').color !== vals.find((v) => v.st === 'off' && v.n === '이름').color;
     ok(diff, `켜짐·꺼짐 글씨색이 다름 (${mode}) — 예전엔 같았음`);
-    await shot(`app_alarm_${mode}.png`, '#panel-alarm');
+    await shot(`app_alarm_${mode}_v2.png`, '#panel-alarm');
   }
 
   // 스위치: 그 자리에서 바뀌고(목록 다시 안 그림), 동그라미가 미끄러진다
@@ -163,11 +163,11 @@ const DESK = { dark: '#303746', light: '#c4c9d0' };
       row: b.closest('.alarm-item').className, saved: JSON.parse(localStorage.getItem('alarms')).find((a) => a.id === 2).enabled };
   });
   ok(after.same, '스위치 누르면 그 줄만 바뀜(같은 요소 — 움직임이 보임)');
-  ok(before.left === '3px' && after.left === '20.4px' && after.aria === 'true' && /\bon\b/.test(after.row) && after.saved === true, '꺼짐→켜짐: 동그라미 3px→20.4px·aria·줄 클래스·저장', `${before.left}→${mid}→${after.left}`);
+  ok(parseFloat(before.left) === 5 && parseFloat(after.left) === 21 && after.aria === 'true' && /\bon\b/.test(after.row) && after.saved === true, '꺼짐→켜짐: 동그라미 5px→21px(홈 3+여백 2 → 3+30−10−2)·aria·줄 클래스·저장', `${before.left}→${mid}→${after.left}`);
   // rotate(220deg) = matrix(cos220, sin220, -sin220, cos220, 0, 0) ≈ (-0.766, -0.643, 0.643, -0.766)
   const m = (after.tr.match(/-?[\d.]+/g) || []).map(Number);
   ok(m.length >= 4 && Math.abs(m[0] + 0.766) < 0.01 && Math.abs(m[1] + 0.643) < 0.01, '켜짐 동그라미 220도 회전 적용', after.tr);
-  ok(parseFloat(mid) > 3 && parseFloat(mid) < 20.4, '0.15초 때 동그라미가 가는 중(미끄러짐)', mid);
+  ok(parseFloat(mid) > 5 && parseFloat(mid) < 21, '0.15초 때 동그라미가 가는 중(미끄러짐)', mid);
   // 누를 때마다 정확히 한 번(5번)
   let flips = 0, prev = after.aria;
   for (let i = 0; i < 5; i++) {
@@ -219,7 +219,7 @@ const DESK = { dark: '#303746', light: '#c4c9d0' };
   await page.clock.runFor(7000);
   let d = await page.textContent('#cd-display');
   ok(d === '00:00:07', '00:00:00 에서 시작 → 7초 뒤 00:00:07', d);
-  for (const mode of ['dark', 'light']) { await setDesk(mode); await page.clock.runFor(700); await shot(`app_count_${mode}.png`, '#panel-countdown'); }
+  for (const mode of ['dark', 'light']) { await setDesk(mode); await page.clock.runFor(700); await shot(`app_count_${mode}_v2.png`, '#panel-countdown'); }
   await page.click('#panel-countdown .cd-btns button:nth-child(2)'); // 일시정지
   const paused = await page.textContent('#cd-display');
   await page.clock.runFor(3000);
@@ -254,6 +254,80 @@ const DESK = { dark: '#303746', light: '#c4c9d0' };
   const pres = await page.evaluate(() => document.querySelectorAll('#cd-preset-row .cd-preset').length);
   ok(pres === 4, '프리셋 4칸 그대로', String(pres));
 
+
+  // ── 3) 스위치 여백·대칭(형 46053)·무채색 그림자(형 46056) — 배율 1 / 1.25 / 1.5 / 2 ──
+  // 켜짐 동그라미는 220도 돌아 있어 상자 크기가 커진다 → 가운데(회전해도 그대로)와 계산된 지름으로 잰다.
+  const MARGIN_LOG = [];
+  function sat(rgb) { const [r, g, b] = rgb.map((v) => v / 255); const mx = Math.max(r, g, b), mn = Math.min(r, g, b); const l = (mx + mn) / 2; if (mx === mn) return 0; return l > 0.5 ? (mx - mn) / (2 - mx - mn) : (mx - mn) / (mx + mn); }
+  for (const dpr of [1, 1.25, 1.5, 2]) {
+    const ctx = await browser.newContext({ viewport: { width: 340, height: 520 }, deviceScaleFactor: dpr });
+    const pg = await ctx.newPage();
+    await pg.addInitScript(() => {
+      localStorage.setItem('alarms', JSON.stringify([
+        { id: 1, t: '07:00', name: '기상', enabled: true, repeat: true, days: [1, 2, 3, 4, 5], sound: 'sounds/happy_bells.wav' },
+        { id: 2, t: '16:29', name: '알람', enabled: false, repeat: false, days: [], sound: 'sounds/happy_bells.wav' },
+      ]));
+    });
+    await pg.goto('file://' + DIST);
+    await pg.evaluate(() => document.fonts.ready);
+    for (const mode of ['dark', 'light']) {
+      await pg.evaluate(([m, c]) => { document.body.style.background = c; changePanelColor(m === 'light' ? 'white' : 'black'); openPanel('alarm'); }, [mode, DESK[mode]]);
+      await pg.waitForTimeout(900);
+      const r = await pg.evaluate(() => {
+        const out = {};
+        for (const [st, id] of [['on', 1], ['off', 2]]) {
+          const b = document.querySelector(`#alarm-list .alarm-toggle[data-id="${id}"]`);
+          const g = b.querySelector('.gv').getBoundingClientRect();
+          const kEl = b.querySelector('.kn'), k = kEl.getBoundingClientRect(), d = parseFloat(getComputedStyle(kEl).width);
+          const cx = k.left + k.width / 2, cy = k.top + k.height / 2;
+          out[st] = { L: cx - d / 2 - g.left, R: g.right - (cx + d / 2), T: cy - d / 2 - g.top, B: g.bottom - (cy + d / 2), d };
+        }
+        const b = document.querySelector('#alarm-list .alarm-toggle[data-id="2"]');
+        out.sh = getComputedStyle(b).boxShadow + ' | ' + getComputedStyle(b.querySelector('.gv')).boxShadow;
+        const bw = (e) => ['Top', 'Right', 'Bottom', 'Left'].map((k) => parseFloat(getComputedStyle(e)['border' + k + 'Width']) || 0).reduce((x, y) => x + y, 0);
+        out.border = bw(b) + bw(b.querySelector('.gv'));
+        // 그림자마다 번짐(blur) 값: "rgb(..) x y blur [spread] [inset]"
+        const blurs = (txt) => txt.split(/,(?![^(]*\))/).map((one) => { const n = one.replace(/rgba?\([^)]*\)/, '').match(/-?[\d.]+px/g) || []; return parseFloat(n[2] || '0'); });
+        out.bodyBlur = Math.min(...blurs(getComputedStyle(b).boxShadow));
+        out.gvBlur = Math.min(...blurs(getComputedStyle(b.querySelector('.gv')).boxShadow));
+        return out;
+      });
+      const f = (v) => v.toFixed(3);
+      for (const st of ['off', 'on']) { const m = r[st]; MARGIN_LOG.push(`배율 ${dpr} ${mode} ${st}: 왼 ${f(m.L)} 오 ${f(m.R)} 위 ${f(m.T)} 아래 ${f(m.B)} (CSS px, 지름 ${f(m.d)})`); }
+      const tag = `배율 ${dpr} ${mode}`;
+      ok(Math.abs(r.off.L - r.on.R) <= 0.5, `${tag}: 꺼짐 왼쪽 여백 = 켜짐 오른쪽 여백`, `${f(r.off.L)} / ${f(r.on.R)}`);
+      ok(Math.abs(r.off.T - r.off.B) <= 0.5 && Math.abs(r.on.T - r.on.B) <= 0.5, `${tag}: 위 여백 = 아래 여백(꺼짐·켜짐)`, `꺼짐 ${f(r.off.T)}/${f(r.off.B)} 켜짐 ${f(r.on.T)}/${f(r.on.B)}`);
+      ok(Math.abs(r.off.L - r.off.T) <= 0.5 && Math.abs(r.on.R - r.on.T) <= 0.5 && r.off.T >= 1.5, `${tag}: 사방 같은 여백(약 2px)`, `꺼짐 왼 ${f(r.off.L)} 위 ${f(r.off.T)} · 켜짐 오 ${f(r.on.R)} 위 ${f(r.on.T)}`);
+      const cols = (r.sh.match(/rgba?\([^)]*\)/g) || []).map((c) => c.match(/[\d.]+/g).slice(0, 3).map(Number));
+      const maxS = Math.max(...cols.map(sat));
+      ok(r.border === 0, `${tag}: 스위치 몸통·홈 테두리선 없음`, String(r.border));
+      ok(r.bodyBlur >= 8 && r.gvBlur >= 4, `${tag}: 그림자는 넓게 번짐(몸통 ≥ 8px·홈 ≥ 4px, 딱딱한 테 없음)`, `몸통 최소 ${r.bodyBlur}px · 홈 최소 ${r.gvBlur}px`);
+      ok(cols.length >= 4 && maxS <= 0.05, `${tag}: 스위치 몸통·홈 그림자 무채색(채도 ≤ 0.05)`, `${cols.length}색, 최대 채도 ${maxS.toFixed(3)}`);
+    }
+    await ctx.close();
+  }
+  if (SHOT_DIR) {
+    fs.writeFileSync(path.join(SHOT_DIR, 'switch_margin_v2.txt'), MARGIN_LOG.join('\n') + '\n');
+    // 4배 확대 사진 재료: 배율 4 로 스위치 칸만 찍는다(어두움·밝음)
+    const ctx = await browser.newContext({ viewport: { width: 340, height: 520 }, deviceScaleFactor: 4 });
+    const pg = await ctx.newPage();
+    await pg.addInitScript(() => {
+      localStorage.setItem('alarms', JSON.stringify([
+        { id: 1, t: '07:00', name: '기상', enabled: true, repeat: true, days: [1, 2, 3, 4, 5], sound: 'sounds/happy_bells.wav' },
+        { id: 2, t: '16:29', name: '알람', enabled: false, repeat: false, days: [], sound: 'sounds/happy_bells.wav' },
+        { id: 3, t: '23:30', name: '정리', enabled: true, repeat: true, days: [0, 1, 2, 3, 4, 5, 6], sound: 'sounds/happy_bells.wav' },
+      ]));
+    });
+    await pg.goto('file://' + DIST);
+    await pg.evaluate(() => document.fonts.ready);
+    for (const mode of ['dark', 'light']) {
+      await pg.evaluate(([m, c]) => { document.documentElement.style.background = c; document.body.style.background = c; changePanelColor(m === 'light' ? 'white' : 'black'); setClockAuto(false); changeBrightness(m === 'light' ? 35 : 220); openPanel('alarm'); }, [mode, DESK[mode]]);
+      await pg.waitForTimeout(900);
+      const bb = await pg.evaluate(() => { const rs = [1, 2, 3].map((i) => document.querySelector(`#alarm-list .alarm-toggle[data-id="${i}"]`).closest('.alarm-item').getBoundingClientRect()); const t = rs[0].top - 2, bt = rs[2].bottom + 2, right = rs[0].right; return { x: right - 130, y: t, w: 130, h: bt - t }; });
+      await pg.screenshot({ path: path.join(SHOT_DIR, `crop_v2_${mode}.png`), clip: { x: bb.x, y: bb.y, width: bb.w, height: bb.h } });
+    }
+    await ctx.close();
+  }
   await browser.close();
   console.log(results.join('\n'));
   console.log(`\n결과: ${pass} 통과 / ${fail} 실패`);

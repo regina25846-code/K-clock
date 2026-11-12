@@ -8,6 +8,9 @@
 @font-face { font-family:'KoPubWorld Dotum Light'; src:url('fonts/KoPubWorld Dotum Light.ttf'); }
 @font-face { font-family:'KoPubWorld Dotum Medium'; src:url('fonts/KoPubWorld Dotum Medium.ttf'); }
 @font-face { font-family:'KoPubWorld Dotum Bold'; src:url('fonts/KoPubWorld Dotum Bold.ttf'); }
+/* 알람 목록 글씨(1.4.5-1, PND-0412) — K-Radar 와 같은 Pretendard(OFL, 라이선스 글은 설치 폴더 licenses/) */
+@font-face { font-family:'Pretendard KR'; font-weight:400; src:url('fonts/Pretendard-Regular.ttf'); }
+@font-face { font-family:'Pretendard KR'; font-weight:700; src:url('fonts/Pretendard-Bold.ttf'); }
 
 * { margin:0; padding:0; box-sizing:border-box; user-select:none; -webkit-user-select:none; }
 body { background:transparent; font-family:'Segoe UI',sans-serif; overflow:hidden; }
@@ -94,15 +97,38 @@ body { background:transparent; font-family:'Segoe UI',sans-serif; overflow:hidde
 .alarm-list::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.15); border-radius:3px; }
 .alarm-list::-webkit-scrollbar-track { background:transparent; }
 .alarm-item { display:flex; align-items:center; justify-content:space-between; padding:5px 2px; font-size:12px; color:#b8b8b8; border-bottom:1px solid rgba(255,255,255,0.08); gap:6px; cursor:grab; }
+/* 알람 목록 글씨·스위치 (1.4.5-1, PND-0412 — 형이 고른 시안 B2: 글꼴은 레이더(Pretendard), 색은 샴페인 골드,
+   시안 /Users/openclaw-mini/.openclaw/kclock_1451_mock/index.html). 켜짐은 밝게, 꺼짐은 한 단계 가라앉힘.
+   색은 패널 바탕(검정/흰색 — body.panel-light)에 따라 아래 변수로 바뀐다. 대비(패널 50% 기준):
+   어두움 켜짐 14.54·요일 10.51·꺼짐 5.55 / 밝음 켜짐 14.16·요일 7.87·꺼짐 5.30. */
+.panel { --al-on:#f4ecdc; --al-tag:#e3c88f; --al-off:#9a9284; --al-tag-bg:transparent; --al-tag-pad:0;
+         --sw-bg:#2a2722; --sw-o1:#12110e; --sw-o2:#3b3730; --sw-i1:#0c0b09; --sw-i2:rgba(255,236,200,.16);
+         --kn-off:#6f6758; --kn-on:#e3c88f; --sw-ring:#e3c88f; }
+body.panel-light .panel { --al-on:#1a160e; --al-tag:#5a3f0e; --al-off:#665a44; --al-tag-bg:#f5e6bd; --al-tag-pad:1px 7px;
+         --sw-bg:#f3ede0; --sw-o1:#bdb5a4; --sw-o2:#ffffff; --sw-i1:#b7ad98; --sw-i2:#ffffffbd;
+         --kn-off:#c9c1b1; --kn-on:#d9b25a; --sw-ring:#8a6a2f; }
+.alarm-item.on, .alarm-item.off { font-family:'Pretendard KR','Segoe UI',sans-serif; font-size:13px; letter-spacing:-0.01em; }
+.alarm-item.on { color:var(--al-on); }
+.alarm-item.off { color:var(--al-off); }
+.alarm-item .al-t { font-weight:700; font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1; margin-right:6px; }
+.alarm-item .al-n { font-weight:400; }
 .alarm-item.dragging { position:relative; z-index:5; cursor:grabbing; background:rgba(255,255,255,0.06); border-radius:5px; box-shadow:0 2px 8px rgba(0,0,0,0.4); }
 .alarm-item .alarm-label { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; }
 .alarm-item input[type=time] { width:100px; flex-shrink:0; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:5px; color:#b8b8b8; padding:3px 4px; font-size:11px; outline:none; font-family:inherit; }
 .alarm-item input[type=text] { flex:1; min-width:0; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:5px; color:#b8b8b8; padding:3px 4px; font-size:11px; outline:none; font-family:inherit; }
 .alarm-edit-btn { flex-shrink:0; width:20px; height:20px; padding:0; background:rgba(255,255,255,0.10); color:#b8b8b8; border:1px solid rgba(255,255,255,0.15); border-radius:5px; font-size:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
-.alarm-toggle { width:26px; height:14px; background:#333; border-radius:7px; position:relative; cursor:pointer; flex-shrink:0; }
-.alarm-toggle::after { content:''; position:absolute; width:10px; height:10px; background:#fff; border-radius:50%; top:2px; left:2px; transition:left 0.15s; }
-.alarm-toggle.on { background:#4a9; }
-.alarm-toggle.on::after { left:14px; }
+/* 스위치 — 형 46039 CSS(60×30 몸통·50×20 오목한 홈·20 동그라미, 0.3s ease-in, 켜지면 미끄러지며 220도)를
+   알람 줄 높이에 맞게 0.6배. 동그라미에 비스듬한 윤기를 얹어 도는 게 보이게 했다. */
+.alarm-toggle { width:36px; height:18px; border-radius:30px; position:relative; border:0; padding:0; flex-shrink:0; cursor:pointer;
+  background:var(--sw-bg); box-shadow:5px 5px 17px var(--sw-o1), -5px -5px 17px var(--sw-o2); outline:none; font:inherit; }
+.alarm-toggle .gv { position:absolute; left:3px; top:3px; width:30px; height:12px; border-radius:30px; pointer-events:none;
+  box-shadow:inset 2px 2px 6px var(--sw-i1), inset -2px -2px 3px var(--sw-i2); }
+.alarm-toggle .kn { position:absolute; top:3px; left:3px; width:12px; height:12px; border-radius:50%; z-index:1; pointer-events:none;
+  background:var(--kn-off) linear-gradient(135deg, rgba(255,255,255,.55) 0 28%, rgba(255,255,255,0) 62%); transition:all 0.3s ease-in; }
+.alarm-toggle.on .kn { left:20.4px; background-color:var(--kn-on); transform:rotate(220deg); transition:0.3s ease-in; }
+.alarm-toggle:active .kn { transform:scale(.88); }
+.alarm-toggle.on:active .kn { transform:rotate(220deg) scale(.88); }
+.alarm-toggle:focus-visible { box-shadow:5px 5px 17px var(--sw-o1), -5px -5px 17px var(--sw-o2), 0 0 0 2px var(--sw-ring); }
 .alarm-del { background:none; border:none; color:rgba(255,80,80,0.6); cursor:pointer; font-size:12px; padding:0 2px; flex-shrink:0; }
 .empty-msg { font-size:11px; color:#777; padding:4px 0; }
 
@@ -122,13 +148,13 @@ body { background:transparent; font-family:'Segoe UI',sans-serif; overflow:hidde
 .day-quick button:hover { opacity:1; }
 .day-quick button.on { opacity:1; color:#4a9; border-color:#4a9; }
 /* 목록 한 줄의 요일 요약 — 이름이 먼저 줄어들고(…), 요약은 절대 안 잘리고 줄도 안 바뀐다 */
-.alarm-days-tag { flex-shrink:0; font-size:10px; white-space:nowrap; opacity:0.5; }
-.alarm-days-tag.rep { color:#4a9; opacity:1; }
+.alarm-days-tag { flex-shrink:0; font-size:11.5px; font-weight:400; white-space:nowrap; color:var(--al-off); line-height:1.35; }
+.alarm-item.on .alarm-days-tag { color:var(--al-tag); font-weight:700; background:var(--al-tag-bg); padding:var(--al-tag-pad); border-radius:9px; }
 /* 수정 중인 줄 — 입력칸 줄 아래에 같은 요일 선택기를 한 줄 더 붙인다 */
 .alarm-item.editing { flex-wrap:wrap; cursor:default; row-gap:6px; }
 .alarm-item.editing .alarm-days { flex-basis:100%; margin-bottom:0; }
 
-/* 카운트다운 */
+/* 카운트(옛 이름 카운트다운) */
 .cd-row { display:flex; align-items:center; gap:4px; margin-bottom:8px; justify-content:center; }
 .cd-row input[type=number] { width:44px; text-align:center; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:5px; color:#b8b8b8; padding:4px; font-size:12px; outline:none; }
 .cd-row span { color:#555; }
@@ -136,7 +162,7 @@ body { background:transparent; font-family:'Segoe UI',sans-serif; overflow:hidde
 .cd-btns { display:flex; gap:5px; justify-content:center; }
 .cd-btns button { padding:4px 10px; border:1px solid rgba(255,255,255,0.15); border-radius:5px; font-size:11px; cursor:pointer; white-space:nowrap; background:rgba(255,255,255,0.08); color:#b8b8b8; }
 
-/* 카운트다운 프리셋 */
+/* 카운트 프리셋 */
 .cd-save-btn { flex-shrink:0; width:36px; padding:5px 0; margin-left:2px; background:rgba(255,255,255,0.10); color:#b8b8b8; border:1px solid rgba(255,255,255,0.15); border-radius:5px; font-size:11px; cursor:pointer; text-align:center; }
 .cd-save-btn.picking { color:#c9a35c; border-color:#c9a35c; }
 .cd-save-btn:disabled { opacity:0.35; cursor:default; }
@@ -240,6 +266,7 @@ body.color-fade .panel, body.color-fade .panel * { transition:color .6s ease, ba
 /* 놓는 순간 바꿀 때(1.4.3-4)는 짧게 — 즉시 바뀐 느낌 */
 body.color-fade-fast .seg, body.color-fade-fast .dot, body.color-fade-fast #text-clock,
 body.color-fade-fast .panel, body.color-fade-fast .panel * { transition:color .12s ease, background-color .12s ease, border-color .12s ease, opacity .05s !important; }
+body.color-fade .alarm-toggle .kn, body.color-fade-fast .alarm-toggle .kn { transition:all 0.3s ease-in !important; }
 
 @keyframes flash { 0%,100%{opacity:1} 50%{opacity:0.15} }
 .flashing { animation:flash 0.5s ease-in-out infinite; }
@@ -285,7 +312,7 @@ body.color-fade-fast .panel, body.color-fade-fast .panel * { transition:color .1
   </div>
 
   <div class="panel" id="panel-countdown">
-    <div class="panel-title">카운트다운</div>
+    <div class="panel-title">카운트</div>
     <button class="close-panel" onclick="closePanel()">✕</button>
     <div class="cd-row">
       <input type="number" id="cd-h" autocomplete="off" placeholder="시" min=0 max=23>
@@ -297,7 +324,7 @@ body.color-fade-fast .panel, body.color-fade-fast .panel * { transition:color .1
     </div>
     <div id="cd-display">00:00:00</div>
     <div class="cd-btns">
-      <button onclick="cdStart()">시작</button>
+      <button onclick="cdStart()" title="시간을 넣고 시작하면 거꾸로, 비워 두고(00:00:00) 시작하면 0부터 위로 셉니다.">시작</button>
       <button onclick="cdPause()">일시정지</button>
       <button onclick="cdReset()">초기화</button>
     </div>
@@ -370,7 +397,7 @@ body.color-fade-fast .panel, body.color-fade-fast .panel * { transition:color .1
 
 <div id="ctx-menu">
   <div class="menu-item" onclick="openPanel('alarm')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><line x1="12" y1="2" x2="12" y2="4"/></svg> 알람</div>
-  <div class="menu-item" onclick="openPanel('countdown')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 카운트다운</div>
+  <div class="menu-item" onclick="openPanel('countdown')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 카운트</div>
   <div class="menu-item" onclick="openPanel('settings')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> 설정</div>
   <div class="menu-sep"></div>
   <div class="menu-item danger" onclick="closeApp()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> 종료</div>
@@ -801,7 +828,7 @@ function applyColors(fade){
   });
   // .cdd-btn/.cdd-item(스타일·알람소리 드롭다운)은 select를 대체한 뒤 이 목록에
   // 추가가 안 돼서 색이 어긋나 보였음(오푸스 리뷰로 발견, 2026-08-02).
-  document.querySelectorAll('.panel-title,.setting-row span,.alarm-item,.empty-msg,#cd-display,.cd-btns button,.alarm-row input,.alarm-days,.alarm-item input,.alarm-edit-btn,.btn-add,.cd-row input,.cd-row span,#alarm-sound,.cdd-btn,.cdd-item').forEach(el=>el.style.color=fg);
+  document.querySelectorAll('.panel-title,.setting-row span,.alarm-item.editing,.empty-msg,#cd-display,.cd-btns button,.alarm-row input,.alarm-days,.alarm-item input,.alarm-edit-btn,.btn-add,.cd-row input,.cd-row span,#alarm-sound,.cdd-btn,.cdd-item').forEach(el=>el.style.color=fg);
   document.querySelectorAll('.close-panel').forEach(el=>el.style.color=fg+'88');
 }
 
@@ -936,9 +963,11 @@ renderNewDays();
 function saveAlarms(){ localStorage.setItem('alarms',JSON.stringify(alarms)); }
 // 이름칸에서 Enter = 「추가」(1.4.3-2). 한글 조합 중 Enter(isComposing / keyCode 229)는
 // 조합을 끝내는 Enter 라서 여기서 등록하면 같은 알람이 두 번 들어간다 — 건너뛴다.
+// Enter 를 누르고 있으면 키 반복으로 같은 알람이 줄줄이 들어갔다 — 반복 입력은 막기만 한다(PND-0332 ㉢).
 function onAlarmNameKey(e){
   if(e.key!=='Enter' || e.isComposing || e.keyCode===229) return;
   e.preventDefault();
+  if(e.repeat) return;
   addAlarm();
 }
 function addAlarm(){
@@ -954,7 +983,15 @@ function addAlarm(){
   saveAlarms();
   renderAlarms();
 }
-function toggleAlarm(id){ const a=alarms.find(x=>x.id===id); if(a) a.enabled=!a.enabled; saveAlarms(); renderAlarms(); }
+// 목록을 다시 그리지 않고 그 줄만 바꾼다 — 다시 그리면 스위치 동그라미가 미끄러지는 움직임이 안 보인다(1.4.5-1)
+function toggleAlarm(id){
+  const a=alarms.find(x=>x.id===id); if(!a) return;
+  a.enabled=!a.enabled; saveAlarms();
+  const btn=document.querySelector(`#alarm-list .alarm-toggle[data-id="${id}"]`);
+  if(!btn){ renderAlarms(); return; }
+  btn.classList.toggle('on',a.enabled); btn.setAttribute('aria-checked',a.enabled?'true':'false');
+  const it=btn.closest('.alarm-item'); it.classList.toggle('on',a.enabled); it.classList.toggle('off',!a.enabled);
+}
 function removeAlarm(id){ alarms.splice(alarms.findIndex(a=>a.id===id),1); saveAlarms(); renderAlarms(); }
 let editingAlarmId=null, editingDays=[];
 function editAlarm(id){
@@ -986,10 +1023,10 @@ function renderAlarms(){
   alarms.forEach(a=>{
     const div=document.createElement('div');
     div.className='alarm-item';
-    div.style.color=c;
     if(a.id===editingAlarmId){
+      div.style.color=c;
       div.classList.add('editing');
-      div.innerHTML=`<input type="time" id="edit-time-${a.id}" value="${a.t}" autocomplete="off" onkeydown="if(event.key==='Enter')saveAlarmEdit(${a.id})"><input type="text" id="edit-name-${a.id}" value="${a.name}" placeholder="이름" autocomplete="off" onkeydown="if(event.key==='Enter'&&!event.isComposing&&event.keyCode!==229)saveAlarmEdit(${a.id})"><button class="alarm-edit-btn" onclick="saveAlarmEdit(${a.id})" title="저장">✓</button><button class="alarm-edit-btn" onclick="cancelAlarmEdit()" title="취소">✕</button><div class="alarm-days"></div>`;
+      div.innerHTML=`<input type="time" id="edit-time-${a.id}" value="${a.t}" autocomplete="off" onkeydown="if(event.key==='Enter'&&!event.repeat)saveAlarmEdit(${a.id})"><input type="text" id="edit-name-${a.id}" value="${a.name}" placeholder="이름" autocomplete="off" onkeydown="if(event.key==='Enter'&&!event.repeat&&!event.isComposing&&event.keyCode!==229)saveAlarmEdit(${a.id})"><button class="alarm-edit-btn" onclick="saveAlarmEdit(${a.id})" title="저장">✓</button><button class="alarm-edit-btn" onclick="cancelAlarmEdit()" title="취소">✕</button><div class="alarm-days"></div>`;
       // 수정 줄 입력칸·버튼 글자도 밝기 설정을 따라간다 — CSS 가 #b8b8b8 로 고정이라
       // 흰색 패널에서 글자가 안 보이던 버그(1.4.3 까지, 시안 LightEdit 기준으로 수정).
       div.querySelectorAll('input,.alarm-edit-btn').forEach(el=>el.style.color=c);
@@ -1005,7 +1042,9 @@ function renderAlarms(){
       return;
     }
     const days=alarmDays(a);
-    div.innerHTML=`<span class="alarm-label" onclick="editAlarm(${a.id})">${a.t} ${a.name}</span><span class="alarm-days-tag${days.length?' rep':''}">${daysLabel(days)}</span><div class="alarm-toggle ${a.enabled?'on':''}" onclick="toggleAlarm(${a.id})"></div><button class="alarm-del" onclick="removeAlarm(${a.id})">✕</button>`;
+    // 켜짐/꺼짐은 줄 클래스로 — 글자색(applyColors)이 줄 전체를 한 색으로 덮던 탓에 둘이 같아 보였다(1.4.5-1)
+    div.classList.add(a.enabled?'on':'off');
+    div.innerHTML=`<span class="alarm-label" onclick="editAlarm(${a.id})"><span class="al-t">${a.t}</span><span class="al-n">${a.name}</span></span><span class="alarm-days-tag${days.length?' rep':''}">${daysLabel(days)}</span><button type="button" class="alarm-toggle ${a.enabled?'on':''}" data-id="${a.id}" role="switch" aria-checked="${a.enabled?'true':'false'}" aria-label="알람 켜기·끄기" onclick="toggleAlarm(${a.id})"><span class="gv"></span><span class="kn"></span></button><button class="alarm-del" onclick="removeAlarm(${a.id})">✕</button>`;
     div.addEventListener('mousedown', e=>startAlarmDrag(e, div));
     list.appendChild(div);
   });
@@ -1061,8 +1100,12 @@ function onAlarmDragEnd(){
   }
 }
 
-// ── 카운트다운 ──
+// ── 카운트 (1.4.5-1 에 «카운트다운»에서 이름을 바꿈, PND-0412) ──
+// 두 가지로 센다: 시간을 넣고 시작 → 거꾸로(cdMode 'down', cdRemain), 00:00:00 그대로 시작 → 0부터 위로
+// (cdMode 'up', cdElapsed, 상한 CD_UP_MAX = 99:59:59 에서 멈춤).
 let cdRemain=0,cdTimer=null,cdRunning=false;
+let cdMode='down', cdElapsed=0;
+const CD_UP_MAX=99*3600+59*60+59;
 const CD_PRESET_MAX=4;
 let cdPresets=[null,null,null,null];
 let cdPickMode=false;
@@ -1159,6 +1202,7 @@ function applyCdPreset(i){
   if(!p||cdRunning) return;
   cdFillInputs(p.sec);
   cdPause();
+  cdMode='down'; cdElapsed=0;
   cdRemain=p.sec;
   renderCd();
 }
@@ -1287,18 +1331,45 @@ document.addEventListener('keydown', e=>{
   if(cdEditIdx>=0){ cancelCdPresetEdit(); return; }
   if(cdPickMode){ cdPickMode=false; renderCdPresets(); syncSaveBtn(); }
 });
-function cdStart(){
-  if(!cdRunning&&cdRemain===0){
-    cdRemain=cdInputSec();
+// 다음 상태만 계산하는 순수 함수(시험에서 그대로 떼어 쓴다).
+// 반환: {mode, remain, elapsed, run} — run=false 면 시작하지 않는다.
+function cdPlanStart(st, inputSec){
+  if(st.running) return {mode:st.mode, remain:st.remain, elapsed:st.elapsed, run:false};
+  if(st.mode==='up' && st.elapsed>0 && st.elapsed<CD_UP_MAX) return {mode:'up', remain:0, elapsed:st.elapsed, run:true};   // 위로 세다 멈춘 것 이어 세기
+  if(st.mode==='down' && st.remain>0) return {mode:'down', remain:st.remain, elapsed:0, run:true};                      // 거꾸로 세다 멈춘 것 이어 세기
+  if(inputSec>0) return {mode:'down', remain:inputSec, elapsed:0, run:true};
+  return {mode:'up', remain:0, elapsed:0, run:true};                                                                    // 00:00:00 → 0부터 위로
+}
+// 1초 한 번. 반환: {remain, elapsed, done, alarm}
+function cdStep(mode, remain, elapsed){
+  if(mode==='up'){
+    const e=Math.min(CD_UP_MAX, elapsed+1);
+    return {remain:0, elapsed:e, done:e>=CD_UP_MAX, alarm:false};
   }
-  if(!cdRemain) return;
+  if(remain<=0) return {remain:0, elapsed:0, done:true, alarm:true};
+  return {remain:remain-1, elapsed:0, done:false, alarm:false};
+}
+function cdStart(){
+  const plan=cdPlanStart({running:cdRunning, mode:cdMode, remain:cdRemain, elapsed:cdElapsed}, cdInputSec());
+  if(!plan.run) return;
+  cdMode=plan.mode; cdRemain=plan.remain; cdElapsed=plan.elapsed;
   cdRunning=true; clearInterval(cdTimer);
   syncSaveBtn();
-  cdTimer=setInterval(()=>{ if(cdRemain<=0){clearInterval(cdTimer);cdRunning=false;syncSaveBtn();triggerAlarm();return;} cdRemain--; renderCd(); },1000);
+  renderCd();
+  cdTimer=setInterval(()=>{
+    const r=cdStep(cdMode, cdRemain, cdElapsed);
+    cdRemain=r.remain; cdElapsed=r.elapsed; renderCd();
+    if(r.done){ clearInterval(cdTimer); cdRunning=false; syncSaveBtn(); if(r.alarm) triggerAlarm(); }
+  },1000);
 }
 function cdPause(){cdRunning=false;clearInterval(cdTimer);syncSaveBtn();}
-function cdReset(){cdPause();cdRemain=0;document.getElementById('cd-display').textContent='00:00:00';}
+function cdReset(){cdPause();cdRemain=0;cdElapsed=0;cdMode='down';document.getElementById('cd-display').textContent='00:00:00';}
+function cdFmt(sec){
+  const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=sec%60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
 function renderCd(){
+  if(cdMode==='up'){ document.getElementById('cd-display').textContent=cdFmt(cdElapsed); return; }
   const h=Math.floor(cdRemain/3600),m=Math.floor((cdRemain%3600)/60),s=cdRemain%60;
   document.getElementById('cd-display').textContent=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
 }
@@ -1389,10 +1460,12 @@ function changePanelColor(c){
 
 // ── 글자색 판단 (1.4.3-2, PND-0330) — 순수 함수만. 시험에서 그대로 떼어 쓴다. ──
 // 시계가 보여줄 두 가지 밝기: 형이 고른 밝기의 밝은 쪽(어두운 배경용)과 어두운 쪽(밝은 배경용).
-// 220 이면 220/35. 가운데 근처(예: 128)를 고르면 둘 다 흐려서 자동이 의미가 없으니 220/35 로 둔다.
+// 220 이면 220/35. 가운데 근처(예: 128)를 고르면 둘 다 흐려서 자동이 의미가 없다 — 예전엔 220/35 로
+// 통째로 바꿔서 흐리게 고른 사람의 밝기가 확 달라졌다(PND-0332 ㉡). 이제 읽히는 데까지만(170/85) 민다.
 function clockLevels(b){
   let light=Math.max(b,255-b);
-  if(!(light>=170)) light=220;
+  if(!Number.isFinite(light)) light=220;
+  else if(light<170) light=170;
   return {light, dark:255-light};
 }
 // 밝기(0~255) → 'light'(밝은 글자) / 'dark'(어두운 글자)
@@ -1663,7 +1736,7 @@ function initUpdateNotice(){
   }catch(e){}
 })();
 
-// 카운트다운 프리셋 복원
+// 카운트 프리셋 복원
 loadCdPresets();
 renderCdPresets();
 syncSaveBtn();

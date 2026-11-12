@@ -196,6 +196,9 @@ fn set_window_size(window: tauri::Window, width: u32, height: u32) {
 #[cfg(windows)]
 fn set_window_rect_native(hwnd: windows::Win32::Foundation::HWND, x: i32, y: i32, cx: i32, cy: i32) {
     use windows::Win32::UI::WindowsAndMessaging::{SetWindowPos, SWP_NOACTIVATE, SWP_NOZORDER};
+    // 이 호출이 일으키는 WindowEvent::Moved 는 사람이 끈 게 아니다 — 패널을 열 때 창이 커지며
+    // 위치가 바뀌면 「방금 놓았다」로 잘못 보고 글자색을 즉시 판정하던 것(PND-0332 ㉣)을 막는다.
+    mark_self_move();
     unsafe {
         let _ = SetWindowPos(hwnd, None, x, y, cx, cy, SWP_NOZORDER | SWP_NOACTIVATE);
     }
@@ -236,7 +239,7 @@ fn set_window_rect(window: tauri::Window, x: i32, y: i32, width: u32, height: u3
 fn sample_ring_luma(hwnd: windows::Win32::Foundation::HWND, clock_px: i32, panel_open: bool) -> Option<(f64, i32, i32)> {
     use windows::Win32::Foundation::RECT;
     use windows::Win32::Graphics::Gdi::{
-        BitBlt, CreateCompatibleDC, CreateDIBSection, DeleteDC, DeleteObject, GetDC, GetMonitorInfoW,
+        BitBlt, CreateCompatibleDC, CreateDIBSection, DeleteDC, DeleteObject, GdiFlush, GetDC, GetMonitorInfoW,
         MonitorFromWindow, ReleaseDC, SelectObject, BITMAPINFO, BITMAPINFOHEADER, BI_RGB,
         DIB_RGB_COLORS, MONITORINFO, MONITOR_DEFAULTTONEAREST, SRCCOPY,
     };
@@ -324,6 +327,8 @@ fn sample_ring_luma(hwnd: windows::Win32::Foundation::HWND, clock_px: i32, panel
             };
             let old = SelectObject(mem, bmp.into());
             if BitBlt(mem, 0, 0, w, h, Some(screen), x0, y0, SRCCOPY).is_ok() {
+                // DIB 비트를 직접 읽기 전에 GDI 가 미뤄 둔 그리기를 끝낸다(MS 문서 권고, PND-0332 ㉥).
+                let _ = GdiFlush();
                 let px = std::slice::from_raw_parts(bits as *const u8, (w as usize) * (h as usize) * 4);
                 // BGRA, 두 칸 건너 하나씩만 봐도 평균엔 충분하다
                 let mut i = 0usize;
@@ -353,6 +358,8 @@ fn sample_ring_luma(hwnd: windows::Win32::Foundation::HWND, clock_px: i32, panel
 // JS 가 1~2초마다 부른다. async 라 메인(UI) 스레드를 막지 않는다.
 // 돌려주는 값: [평균 밝기 0~255, 창 왼쪽 x, 창 위 y](물리 픽셀). 못 읽으면 null.
 // 실패·패닉은 전부 None 으로 삼킨다 — 이 기능 때문에 앱이 죽으면 안 된다.
+// ⚠ catch_unwind 는 panic="unwind" 일 때만 듣는다. 1.4.4 까지 src-tauri/.cargo/config.toml [profile.release] 가
+//   panic="abort" 라 이 줄이 무효였다(PND-0332 ㉠) → 1.4.5-1 에서 abort 를 뺐다.
 #[tauri::command]
 async fn sample_backdrop_luma(window: tauri::Window, clock_h: f64, panel_open: bool) -> Option<(f64, i32, i32)> {
     #[cfg(windows)]
@@ -382,6 +389,14 @@ async fn sample_backdrop_luma(window: tauri::Window, clock_h: f64, panel_open: b
 // 드래그 끝 감지 상태(1.4.3-4). 이동 알림은 메인 스레드에서 오고, 확인은 작은 스레드가 30ms 마다 한다.
 static LAST_MOVE_MS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 static MOVE_PENDING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+// 앱이 스스로 창을 옮긴 시각 + 여유(window_math::SELF_MOVE_GRACE_MS). 이 시각 전의 Moved 는 무시한다(PND-0332 ㉣).
+static SELF_MOVE_UNTIL_MS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+// 드래그 끝 확인 스레드 — 끌고 있지 않을 땐 잠들어(park) 있다가 Moved 가 오면 깨운다(PND-0332 ㉤, 예전엔 30ms 마다 상시).
+static MOVE_WATCHER: std::sync::OnceLock<std::thread::Thread> = std::sync::OnceLock::new();
+#[allow(dead_code)]
+fn mark_self_move() {
+    SELF_MOVE_UNTIL_MS.store(now_ms() + window_math::SELF_MOVE_GRACE_MS, std::sync::atomic::Ordering::Relaxed);
+}
 fn now_ms() -> u64 {
     std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
 }
@@ -399,10 +414,14 @@ fn mouse_button_down() -> bool {
     }
 }
 fn start_move_end_watcher(app: tauri::AppHandle) {
-    let _ = std::thread::Builder::new().name("kclock-move-end".into()).spawn(move || loop {
-        std::thread::sleep(std::time::Duration::from_millis(window_math::MOVE_END_POLL_MS));
+    let spawned = std::thread::Builder::new().name("kclock-move-end".into()).spawn(move || loop {
         let pending = MOVE_PENDING.load(std::sync::atomic::Ordering::Relaxed);
-        if !pending { continue; }
+        if !pending {
+            // 할 일이 없으면 잔다. unpark 가 먼저 와도 park 는 바로 돌아오므로 놓치지 않는다(가짜로 깨어도 위에서 다시 본다).
+            std::thread::park();
+            continue;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(window_math::MOVE_END_POLL_MS));
         let last = LAST_MOVE_MS.load(std::sync::atomic::Ordering::Relaxed);
         if window_math::move_end_due(pending, now_ms(), last, mouse_button_down()) {
             MOVE_PENDING.store(false, std::sync::atomic::Ordering::Relaxed);
@@ -412,6 +431,9 @@ fn start_move_end_watcher(app: tauri::AppHandle) {
             }
         }
     });
+    if let Ok(handle) = spawned {
+        let _ = MOVE_WATCHER.set(handle.thread().clone());
+    }
 }
 
 #[tauri::command]
@@ -600,8 +622,15 @@ fn main() {
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::Moved(_) = event {
                 if window.label() == "main" {
-                    LAST_MOVE_MS.store(now_ms(), std::sync::atomic::Ordering::Relaxed);
+                    let now = now_ms();
+                    if window_math::is_self_move(now, SELF_MOVE_UNTIL_MS.load(std::sync::atomic::Ordering::Relaxed)) {
+                        return;
+                    }
+                    LAST_MOVE_MS.store(now, std::sync::atomic::Ordering::Relaxed);
                     MOVE_PENDING.store(true, std::sync::atomic::Ordering::Relaxed);
+                    if let Some(t) = MOVE_WATCHER.get() {
+                        t.unpark();
+                    }
                 }
                 return;
             }

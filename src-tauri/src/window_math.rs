@@ -49,9 +49,24 @@ pub fn move_end_due(pending: bool, now_ms: u64, last_move_ms: u64, button_down: 
     pending && !button_down && now_ms.saturating_sub(last_move_ms) >= MOVE_END_QUIET_MS
 }
 
+// 앱이 스스로 SetWindowPos 로 창을 옮긴 뒤 이만큼은 Moved 를 드래그로 치지 않는다(PND-0332 ㉣).
+// 사람이 끄는 드래그는 이보다 길게 Moved 가 이어지므로 끝 감지는 그대로 된다.
+pub const SELF_MOVE_GRACE_MS: u64 = 250;
+pub fn is_self_move(now_ms: u64, self_move_until_ms: u64) -> bool {
+    now_ms < self_move_until_ms
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn self_move_grace() {
+        let until = 1_000 + SELF_MOVE_GRACE_MS;
+        assert!(is_self_move(1_000, until));
+        assert!(is_self_move(1_000 + SELF_MOVE_GRACE_MS - 1, until));
+        assert!(!is_self_move(1_000 + SELF_MOVE_GRACE_MS, until));
+        assert!(!is_self_move(5_000, 0)); // 한 번도 안 옮겼으면 무시 안 함
+    }
     // 형 배치(배율 전부 100%): 1번 1440×2560 세로 메인 왼쪽·위로 조금 높음,
     // 2번(메인) 5120×1440, 3번 2560×1600 메인 아래 가운데.
     const M1: Rect = (-1440, -300, 1440, 2560);
